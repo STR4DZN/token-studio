@@ -47,4 +47,8 @@ jobs:
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          gh release create "$RELEASE_TAG" release-assets/module.json release-assets/token-studio.zip release-assets/SHA256SUMS.txt --verify-tag --title "Token Studio $RELEASE_TAG" --notes "Editor de tokens e ficha COMP/CON para testes no Foundry 13. Instale pelo module.json. A integração em Foundry 13 + Lancer reais ainda requer validação. Consulte CHANGELOG.md e VALIDATION.md."
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" release-assets/module.json release-assets/token-studio.zip release-assets/SHA256SUMS.txt --clobber
+          else
+            gh release create "$RELEASE_TAG" release-assets/module.json release-assets/token-studio.zip release-assets/SHA256SUMS.txt --verify-tag --title "Token Studio $RELEASE_TAG" --notes "Editor de tokens e ficha COMP/CON para testes no Foundry 13. Instale pelo module.json. A integração em Foundry 13 + Lancer reais ainda requer validação. Consulte CHANGELOG.md e VALIDATION.md."
+          fi

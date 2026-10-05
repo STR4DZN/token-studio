@@ -1,0 +1,30 @@
+{
+  "id": "token-studio",
+  "title": "Token Studio",
+  "description": "Editor independente de retratos e tokens, catálogo de molduras e painel detalhado de fichas COMP/CON para o mestre.",
+  "version": "0.2.1",
+  "compatibility": {
+    "minimum": "13",
+    "maximum": "13"
+  },
+  "authors": [
+    {
+      "name": "Token Studio"
+    }
+  ],
+  "esmodules": [
+    "scripts/foundry.js"
+  ],
+  "styles": [
+    "styles/editor.css",
+    "styles/host.css"
+  ],
+  "languages": [],
+  "license": "LICENSE",
+  "url": "https://github.com/STR4DZN/token-studio",
+  "manifest": "https://raw.githubusercontent.com/STR4DZN/token-studio/main/module.json",
+  "download": "https://github.com/STR4DZN/token-studio/releases/download/v0.2.1/token-studio.zip",
+  "readme": "https://github.com/STR4DZN/token-studio/blob/main/README.md",
+  "bugs": "https://github.com/STR4DZN/token-studio/issues",
+  "changelog": "https://github.com/STR4DZN/token-studio/blob/main/CHANGELOG.md"
+}

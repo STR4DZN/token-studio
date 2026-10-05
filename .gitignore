@@ -1,0 +1,9 @@
+node_modules
+build/
+dist/
+release/
+.openai/
+qa/
+*.log
+__pycache__/
+.DS_Store

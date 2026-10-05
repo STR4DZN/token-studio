@@ -1,0 +1,25 @@
+{
+  "name": "token-studio",
+  "version": "0.2.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node scripts/prepare-sites-build.mjs",
+    "preview": "vite preview",
+    "test:sites": "node --test tests/sites-worker.test.mjs",
+    "build:module": "vite build --config vite.module.config.mjs && node scripts/package-module.mjs",
+    "test": "node --test tests/engine.test.mjs tests/foundry-bootstrap.test.mjs tests/compcon.test.mjs tests/sheet-adapter.test.mjs",
+    "validate:release": "node scripts/validate-release.mjs",
+    "release:assets": "npm run build:module && npm run validate:release && python3 scripts/package-release.py"
+  },
+  "dependencies": {
+    "@fontsource/inter": "^5.3.0",
+    "@fortawesome/fontawesome-free": "^7.3.1",
+    "@vitejs/plugin-react": "5.0.4",
+    "dompurify": "^3.4.16",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "vite": "6.4.2"
+  }
+}

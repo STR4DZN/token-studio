@@ -26,4 +26,14 @@ for (const file of [...source.esmodules, ...source.styles, source.license,
   assert(!file.startsWith('/') && !file.split('/').includes('..'));
   await access(`release/token-studio/${file}`);
 }
+const catalog = await json('src/frame-catalog.json');
+assert.equal(catalog.length, 356, 'All supplied frame images must remain catalogued');
+for (const entry of catalog) {
+  for (const file of [entry.file, entry.thumb]) {
+    assert(!file.startsWith('/') && !file.split('/').includes('..'));
+    await access(`release/token-studio/assets/${file}`);
+  }
+}
+await access('release/token-studio/assets/pilot.png');
+await access('release/token-studio/assets/frame-silver.png');
 console.log(`Release v${pkg.version}: manifests, versions and packaged files validated.`);

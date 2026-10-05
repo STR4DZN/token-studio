@@ -1,4 +1,4 @@
-# Token Studio — v0.2.4
+# Token Studio — v0.2.5
 
 Editor independente de retratos e tokens, catálogo de molduras e painel de ficha COMP/CON para o mestre. Interface baseada na proposta visual escolhida: tema escuro, destaque violeta, imagem grande e controles diretos.
 
@@ -21,6 +21,10 @@ O manifesto usa um ZIP fixado na versão da release. O arquivo `token-studio.zip
 5. Em Configurar configurações, escolha **Token Studio: pasta de imagens**. O padrão é `token-studio`, dentro de Data.
 
 O Tokenizer não é necessário. Esta versão não depende de outros módulos. Fontes, ícones e o editor são distribuídos no pacote, sem CDN.
+
+## Vincular ficha COMP/CON ao ator
+
+Abra Token Studio no ator piloto → **Ficha do mestre** → importe o link/código ou JSON → **Vincular / atualizar ator…** → revise e aplique. Identidade, retrato, build, recursos e mechas começam selecionados. O código e a data de sincronização passam à ficha nativa do Lancer. O retrato é guardado em Data e aparece na ficha e no editor; um token personalizado mantém sua arte e seus ajustes. O token padrão fica vinculado ao ator. Para buscar uma versão nova, use **Atualizar origem**, revise e aplique novamente. Não há sincronização em segundo plano nem escrita na conta COMP/CON.
 
 ## Usar
 

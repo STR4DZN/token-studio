@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { createProject, createView, validateProject, clone, outputSize, constrain, loadResources, renderOutput, renderStage, exportView, presetFromView, applyPreset, downloadBlob as automaticDownload, enclosedMask,maskAperture } from './engine.js';
 import { readDraft, writeDraft, readPresets, writePresets } from './storage.js';
 import {assetPath} from './asset-path.js';
+import {syncPortraitProject} from './actor-images.js';
 import {FrameGallery}from'./FrameGallery.jsx';
 export const Icon = ({ name }) => <i className={`fa-solid fa-${name}`} aria-hidden="true" />;
 const defaults = { assetsBase: '/assets/', name: 'Ária', type: 'Piloto', key: 'standalone', isFoundry: false };
@@ -29,6 +30,14 @@ export function App({ host: suppliedHost }) {
   const [history, setHistory] = useState({ past: [], future: [] }); const hist = useRef(history); hist.current = history; const imageInput = useRef(), borderInput = useRef(), projectInput = useRef(), zoomGesture = useRef(), taskLock = useRef(false);
   const [sceneCount, setSceneCount] = useState(host.sceneCount || 0);const appRef=useRef();
   const [exports,setExports]=useState([]);const exportRefs=useRef([]);
+  const syncedPortrait = useRef(null);
+  useEffect(()=>{
+    const update = host.imageUpdate;
+    if (!ready || !update?.source || syncedPortrait.current===update.id) return;
+    syncedPortrait.current=update.id;
+    replace(syncPortraitProject(latest.current,update.source));
+    setError('');setNotice('Retrato do ator atualizado. Os ajustes do token foram preservados.');
+  },[ready,host.imageUpdate]);
   function downloadBlob(blob,filename){const item=automaticDownload(blob,filename,false);const next=[...exportRefs.current,item];while(next.length>3)URL.revokeObjectURL(next.shift().url);exportRefs.current=next;setExports(next);}
   useEffect(()=>{setExports([]);exportRefs.current=[];return()=>{for(const item of exportRefs.current)URL.revokeObjectURL(item.url);};},[]);
   useEffect(()=>{if(!modal)return;const previous=document.activeElement,dialog=appRef.current?.querySelector('.ts-dialog');dialog?.focus();function trap(e){if(e.key==='Escape'&&!taskLock.current){e.preventDefault();setModal(null);}if(e.key!=='Tab')return;const items=[...dialog.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),[tabindex="0"]')];if(!items.length){e.preventDefault();return;}const first=items[0],last=items.at(-1);if(e.shiftKey&&(document.activeElement===first||document.activeElement===dialog)){e.preventDefault();last.focus();}else if(!e.shiftKey&&(document.activeElement===last||document.activeElement===dialog)){e.preventDefault();first.focus();}}dialog?.addEventListener('keydown',trap);return()=>{dialog?.removeEventListener('keydown',trap);previous?.focus();};},[modal]);

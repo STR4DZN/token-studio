@@ -21,7 +21,7 @@ const tag = process.env.RELEASE_TAG;
 if (tag) assert.equal(tag, `v${pkg.version}`, 'Tag and module version must match');
 for (const file of [...source.esmodules, ...source.styles, source.license,
   'scripts/editor.js', 'scripts/transaction.js', 'scripts/sheet-adapter.js',
-  'scripts/compcon.js', 'scripts/asset-path.js', 'assets/frames/credits.json', 'COMP_CON_GUIDE.md',
+  'scripts/compcon.js', 'scripts/asset-path.js', 'scripts/actor-images.js', 'assets/frames/credits.json', 'COMP_CON_GUIDE.md',
   'licenses/React.txt', 'licenses/DOMPurify.txt']) {
   assert(!file.startsWith('/') && !file.split('/').includes('..'));
   await access(`release/token-studio/${file}`);

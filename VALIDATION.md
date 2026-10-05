@@ -1,4 +1,12 @@
-# Validação — Token Studio 0.2.4
+# Validação — Token Studio 0.2.5
+
+## Vínculo COMP/CON na 0.2.5
+
+- 53 testes de domínio/bootstrap simulados passam, incluindo dez regressões novas; os cinco testes do pacote compilado fazem parte obrigatória da publicação.
+- Testado: retrato v3/legado/embutido, bytes/tipo de imagem, erros de rede/HTML/tamanho, upload pelo FilePicker simulado e retorno de nome/retrato/código/vínculo para o editor aberto.
+- Testado: aplicação e atualização de retrato junto de código/data, token padrão vinculado, preservação dos ajustes do token personalizado e leitura nativa da origem.
+- Testado: concorrência durante download/backup, troca do código após revisão, falha antes de escrita e falha em mecha com recuperação da imagem e token do piloto.
+- Build e pacote devem ser verificados no GitHub Actions e no ZIP publicado. A verificação dentro de uma instalação real de Foundry + Lancer segue pendente.
 
 ## Correção das rotas de molduras na 0.2.4
 
@@ -50,7 +58,7 @@
 4. Abra Ficha do mestre e consulte o link. Confira todos os talentos/ranks, armadura, duas armas, três equipamentos, descrições/actions e dois loadouts. Nenhum mecha deve aparecer no piloto de referência.
 5. Edite um campo, consulte novamente e confira que a edição começa preservada. Exporte o projeto; abra outra cópia para confirmar a recuperação portátil. Confira que notas privadas não entram no export.
 6. Prepare a revisão de identidade/build com combate e mechas desmarcados. Resolva avisos de itens já existentes via adoção explícita; decida sobre gerenciados antigos. Confirme schema e conteúdo antes de aplicar.
-7. Confira o backup JSON na pasta de saída e compare equipamentos, referências do loadout, HASE, nível e estatísticas recalculadas. Recursos antigos de combate, imagens e token devem permanecer.
+7. Confira o backup JSON na pasta de saída e compare equipamentos, referências do loadout, HASE, nível e estatísticas recalculadas. Recursos antigos de combate e imagem devem permanecer quando suas opções forem desmarcadas. Em outra revisão, marque Retrato e confira a imagem COMP/CON na ficha e no editor, código/data nativos e nome/vínculo do token padrão. A arte, escala, anéis e demais ajustes de um token personalizado devem permanecer.
 8. Faça uma revisão separada de recursos; teste dano final e usos no rascunho. Confira que condições da cópia não produzem ActiveEffects nativos sem uma automação externa.
 9. Use outra ficha que realmente contenha mechas para testar frame, montagens, extra/integrated, mods, sistemas integrados, recursos e vínculos. Registre divergências de homebrew. Teste falha somente num mundo de teste e confira restauração.
 10. Acrescente `compatibility.verified` apenas depois de um ensaio real aprovado e documentado.

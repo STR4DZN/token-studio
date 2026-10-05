@@ -1,4 +1,5 @@
-import { copy, parsePilot, entries, validateSheet } from "./compcon.js";
+import { copy, parsePilot, entries, validateSheet, pilotPortrait, shareCode } from "./compcon.js";
+import { isDefaultImage, syncPortraitProject } from './actor-images.js';
 const ID = "token-studio";
 const kinds = {
   skills: "skill",
@@ -373,6 +374,8 @@ function actorPatch(raw, parts, type = "pilot") {
   const stats = raw.stats?.current || {},
     max = raw.stats?.max || {};
   if (parts.identity) {
+    patch['prototypeToken.name'] = raw.name;
+    patch['prototypeToken.actorLink'] = true;
     patch.name = raw.name;
     for (const field of type === "pilot"
       ? [
@@ -599,11 +602,28 @@ export async function prepareSheetPlan({
     documents = [];
   const pilotEntries = entries(raw).filter((e) => e.path[0] !== "mechs");
   const patch = actorPatch(raw, parts);
+  function addPortrait(target, data, patch) {
+    if (!parts.portrait) return;
+    const portrait = pilotPortrait(data);
+    if (!portrait) { warnings.push(`${data.name}: a ficha não contém retrato publicado; a imagem atual será preservada.`); return; }
+    patch.img = portrait;
+    if (isDefaultImage(target?.prototypeToken?.texture?.src)) patch['prototypeToken.texture.src'] = portrait;
+    const project = target?.getFlag?.(ID, 'project');
+    if (project?.views) patch[`flags.${ID}.project`] = syncPortraitProject(project, portrait);
+  }
+  addPortrait(actor, raw, patch);
   const items = parts.build
     ? itemPlan(actor, pilotEntries, parts, warnings, changes)
     : [];
-  if (sheet.source?.code && parts.identity)
-    patch["system.cloud_id"] = sheet.source.code;
+  let code = sheet.source?.code || raw.cloudID || '';
+  if (code) {
+    try { code = shareCode(code); } catch { if (sheet.source?.code) throw new Error('Código de compartilhamento COMP/CON inválido.'); code = ''; }
+  }
+  if (parts.identity) {
+    patch['system.cloud_id'] = code;
+    if (code) patch['system.last_cloud_update'] = new Date().toISOString();
+    patch[`flags.${ID}.compconLink`] = {actorUuid:actor.uuid, pilotId:raw.id, code, url:code ? `https://compcon.app/link/pilot/${code}/full/` : '', importedAt:Date.now()};
+  }
   const pilot = {
     actor,
     uuid: actor.uuid,
@@ -660,6 +680,7 @@ export async function prepareSheetPlan({
         "system.lid": mech.id,
         "system.pilot": actor.uuid,
       };
+      addPortrait(existing, mech, mechPatch);
       if (!mech.id)
         throw new Error(
           "Mecha sem ID: revise os dados completos antes de aplicar.",
@@ -717,6 +738,7 @@ export async function prepareSheetPlan({
     parts: copy(parts),
     preparedAt: Date.now(),
     sheetFingerprint: JSON.stringify(sheet.data),
+    sourceFingerprint: JSON.stringify(sheet.source),
   };
 }
 function refsFor(doc, created) {
@@ -819,7 +841,7 @@ async function restoreActor(actor, before) {
       recursive: false,
     });
   await actor.update(
-    { name: before.name, system: before.system, flags: before.flags },
+    { name: before.name, system: before.system, flags: before.flags, img:before.img, ...(before.prototypeToken ? {prototypeToken:before.prototypeToken} : {}) },
     { diff: false, recursive: false },
   );
 }
@@ -829,6 +851,7 @@ export async function applySheetPlan({
   game,
   createActor,
   saveBackup,
+  resolvePortrait,
 }) {
   const pilot = plan.documents[0]?.actor;
   permission(pilot, game);
@@ -837,7 +860,7 @@ export async function applySheetPlan({
     throw new Error(
       "A revisão contém impedimentos. Corrija-os antes de aplicar.",
     );
-  if (plan.sheetFingerprint !== JSON.stringify(sheet.data))
+  if (plan.sheetFingerprint !== JSON.stringify(sheet.data) || plan.sourceFingerprint !== JSON.stringify(sheet.source))
     throw new Error(
       "O rascunho mudou depois da revisão. Prepare uma nova revisão.",
     );
@@ -849,10 +872,29 @@ export async function applySheetPlan({
       throw new Error(
         `${doc.actor.name} mudou no Foundry após a revisão. Reabra a revisão para evitar sobrescrever outra edição.`,
       );
+  const portraits = new Map(), downloaded = new Map();
+  if (resolvePortrait) {
+    for (const doc of plan.documents) if (doc.patch.img) {
+      const source = doc.patch.img;
+      if (!downloaded.has(source)) downloaded.set(source, await resolvePortrait(doc.actor || pilot, source));
+      const path = downloaded.get(source);
+      if (typeof path !== 'string' || !path) throw new Error('Não foi possível guardar o retrato importado.');
+      portraits.set(doc, path);
+    }
+    // Downloads can take time: do not overwrite changes made while they ran.
+    for (const doc of plan.documents) if (doc.actor && JSON.stringify(doc.before) !== JSON.stringify(doc.actor.toObject()))
+      throw new Error(`${doc.actor.name} mudou no Foundry durante o download do retrato. Prepare uma nova revisão.`);
+    if (plan.sheetFingerprint !== JSON.stringify(sheet.data) || plan.sourceFingerprint !== JSON.stringify(sheet.source)) throw new Error('O rascunho mudou durante o download. Prepare uma nova revisão.');
+  }
   if (saveBackup)
     await saveBackup(
       plan.documents.filter((d) => d.before).map((d) => d.before),
     );
+  permission(pilot, game);
+  for (const doc of plan.documents) if (doc.actor && JSON.stringify(doc.before) !== JSON.stringify(doc.actor.toObject()))
+    throw new Error(`${doc.actor.name} mudou no Foundry durante o backup. Prepare uma nova revisão.`);
+  if (plan.sheetFingerprint !== JSON.stringify(sheet.data) || plan.sourceFingerprint !== JSON.stringify(sheet.source))
+    throw new Error('O rascunho mudou durante o backup. Prepare uma nova revisão.');
   const touched = [];
   try {
     for (const doc of plan.documents) {
@@ -890,7 +932,24 @@ export async function applySheetPlan({
           ...doc.patch,
           ...(plan.parts.build ? loadoutPatch(doc, ref) : {}),
         };
-      if (doc.type === "pilot") patch[`flags.${ID}.sheetProject`] = copy(sheet);
+      const portrait = portraits.get(doc) || doc.patch.img;
+      if (portrait) {
+        patch.img = portrait;
+        if ('prototypeToken.texture.src' in patch) patch['prototypeToken.texture.src'] = portrait;
+        const project = doc.before?.flags?.[ID]?.project;
+        if (project?.views) patch[`flags.${ID}.project`] = syncPortraitProject(project, portrait);
+        patch[`flags.${ID}.portraitSource`] = {remote:doc.patch.img, local:portrait, importedAt:Date.now()};
+      }
+      if (doc.type === "pilot") {
+        if (plan.parts.identity && patch['system.cloud_id']) patch['system.last_cloud_update'] = new Date().toISOString();
+        const linked = copy(sheet);
+        linked.source.actorUuid = doc.actor.uuid;
+        if (plan.parts.identity && patch['system.cloud_id']) {
+          linked.source.code = patch['system.cloud_id'];
+          linked.source.url = `https://compcon.app/link/pilot/${linked.source.code}/full/`;
+        }
+        patch[`flags.${ID}.sheetProject`] = linked;
+      }
       await doc.actor.update(patch);
     }
   } catch (error) {
@@ -908,7 +967,7 @@ export async function applySheetPlan({
         : `Aplicação falhou; os documentos alterados foram restaurados. ${error.message}`,
     );
   }
-  return { applied: touched.length };
+  return { applied: touched.length, portrait:portraits.get(plan.documents[0]) || plan.documents[0].patch.img || null };
 }
 function packedDefinition(item) {
   const s = item.system?.toObject?.() || copy(item.system || {});
@@ -989,6 +1048,7 @@ function readNativeMech(actor, previous) {
     raw = previous ? copy(previous) : {};
   raw.id = s.lid || actor.id;
   raw.name = actor.name;
+  raw.img = {...(raw.img || {}), cloud_portrait:actor.getFlag?.(ID,'portraitSource')?.remote || (/^(?:https:|data:)/i.test(actor.img || '') ? actor.img : '')};
   raw.notes = s.notes || "";
   raw.stats = nativeStats(s, raw.stats);
   raw.corePower = s.core_energy;
@@ -1046,6 +1106,8 @@ export function readNativePilot(actor, game) {
         stats: { current: {}, max: {} },
       };
   raw.name = actor.name;
+  raw.cloudID = s.cloud_id || '';
+  raw.img = {...(raw.img || {}), cloud_portrait:actor.getFlag?.(ID,'portraitSource')?.remote || (/^(?:https:|data:)/i.test(actor.img || '') ? actor.img : '')};
   for (const k of [
     "callsign",
     "background",

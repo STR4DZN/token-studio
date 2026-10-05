@@ -10,6 +10,7 @@ import {
   createSheet,
   validateSheet,
   downloadPilot,
+  pilotPortrait,
   getPath,
   setPath,
   diffData,
@@ -558,9 +559,10 @@ export function SheetEditor({ host = {} }) {
     [downloads, setDownloads] = useState([]),
     [applyParts, setApplyParts] = useState({
       identity: true,
+      portrait: true,
       build: true,
-      combat: false,
-      mechs: false,
+      combat: true,
+      mechs: true,
     });
   const latest = useRef(sheet),
     hist = useRef(history),
@@ -658,8 +660,12 @@ export function SheetEditor({ host = {} }) {
     actions = useMemo(() => (data ? allActions(data) : []), [data]);
   const unit = unitIndex < 0 ? data : data?.mechs?.[unitIndex],
     unitPath = unitIndex < 0 ? [] : ["mechs", unitIndex];
-  function update(next, record = true) {
-    if (lock.current) return;
+  const portrait = useMemo(()=>{
+    try { return pilotPortrait(unit) || (unitIndex < 0 ? host.source || '' : ''); }
+    catch { return ''; }
+  },[unit,unitIndex,host.source]);
+  function update(next, record = true, applying = false) {
+    if (lock.current && !applying) return;
     if (record && latest.current) {
       const h = {
         past: [...hist.current.past.slice(-39), copy(latest.current)],
@@ -730,8 +736,9 @@ export function SheetEditor({ host = {} }) {
       setModal(null);
       setLoadoutIndex(next.data.active_index || 0);
       setNotice(
-        "Ficha carregada. A cópia pode ser editada; o COMP/CON original não foi alterado.",
+        host.isFoundry ? "Ficha carregada. Vincule ao ator para aplicar os dados e o retrato." : "Ficha carregada. A cópia pode ser editada; o COMP/CON original não foi alterado.",
       );
+      if (host.isFoundry) setModal('apply-options');
       return;
     }
     const samePilot = current.data.id === incoming.id;
@@ -906,10 +913,12 @@ export function SheetEditor({ host = {} }) {
   }
   async function applyFoundry() {
     await run(async () => {
-      await host.applySheet(foundryPlan, latest.current);
+      const result = await host.applySheet(foundryPlan, latest.current);
+      if (result.sheetProject) update(result.sheetProject,true,true);
+      host.onSheetApplied?.(result);
       setModal(null);
       setNotice(
-        "Alterações aplicadas no Foundry. A ficha original do COMP/CON continua independente.",
+        "Ficha vinculada ao ator e alterações aplicadas no Foundry.",
       );
     });
   }
@@ -1150,6 +1159,7 @@ export function SheetEditor({ host = {} }) {
       ) : (
         <>
           <header className="ts-sheet-header" inert={busy ? true : undefined}>
+            {portrait && <img className="ts-sheet-avatar" src={portrait} alt={`Retrato de ${unit?.name || data.name}`} />}
             <div>
               <div className="ts-sheet-eyebrow">
                 Ficha do mestre •{" "}
@@ -1213,7 +1223,7 @@ export function SheetEditor({ host = {} }) {
                 )}
                 {new Date(sheet.source.importedAt).toLocaleString("pt-BR")}
                 <br />
-                Originais preservados.
+                {sheet.source.actorUuid ? `Ator vinculado: ${host.name || data.name}` : 'Ficha aguardando vínculo ao ator.'}
                 <br />
                 Notas do mestre são privadas.
               </div>
@@ -2014,7 +2024,7 @@ export function SheetEditor({ host = {} }) {
                   host.isFoundry ? setModal("apply-options") : portable()
                 }
               >
-                {host.isFoundry ? "Revisar alterações…" : "Salvar projeto"}
+                {host.isFoundry ? "Vincular / atualizar ator…" : "Salvar projeto"}
               </button>
             </div>
           </footer>
@@ -2218,7 +2228,8 @@ export function SheetEditor({ host = {} }) {
           </p>
           <div className="ts-destinations">
             {[
-              ["identity", "Identidade e biografia"],
+              ["identity", "Identidade, biografia e vínculo COMP/CON"],
+              ["portrait", "Retrato do COMP/CON na ficha e no editor"],
               ["build", "Build, equipamentos e talentos"],
               ["combat", "Recursos atuais de combate"],
               ["mechs", "Mechas e seus loadouts"],
@@ -2243,8 +2254,9 @@ export function SheetEditor({ host = {} }) {
           <p className="ts-sheet-muted">
             A sincronização de build atualiza apenas itens gerenciados pelo
             Token Studio. Itens externos são preservados e podem gerar avisos de
-            duplicidade. Sua arte e configuração do token não entram nesta
-            operação.
+            duplicidade. O retrato é guardado no Foundry. Um token com imagem
+            própria mantém sua arte, moldura e configurações; um token padrão
+            recebe a imagem do piloto como ponto de partida.
           </p>
           <div className="ts-dialog-actions">
             <button

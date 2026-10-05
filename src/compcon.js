@@ -7,6 +7,35 @@ export const REFERENCE_LINK =
   "https://compcon.app/link/pilot/1HM40U8YCU35/full/";
 const badKeys = new Set(["__proto__", "constructor", "prototype"]);
 export const copy = (value) => structuredClone(value);
+export function pilotPortrait(raw) {
+  const source = raw?.img?.cloud_portrait || raw?.cloud_portrait || raw?.img?.portrait || raw?.portrait || '';
+  if (!source) return '';
+  if (typeof source !== 'string') throw new Error('O retrato do COMP/CON não contém um endereço válido.');
+  if (/^data:image\/(?:png|jpeg|webp|gif);base64,[a-z0-9+/=\s]+$/i.test(source)) return source;
+  let url;
+  try { url = new URL(source, 'https://compcon.app/'); } catch { throw new Error('Endereço do retrato COMP/CON inválido.'); }
+  if (url.protocol !== 'https:' || url.username || url.password) throw new Error('Use um retrato HTTPS ou uma imagem PNG/JPG/WebP/GIF incorporada no COMP/CON.');
+  return url.href;
+}
+export async function downloadPortrait(source, {fetcher = fetch} = {}) {
+  const validated = pilotPortrait({img:{cloud_portrait:source}});
+  if (!validated) throw new Error('A ficha COMP/CON não possui retrato.');
+  let response;
+  try { response = await fetcher(validated, {credentials:'omit', signal:AbortSignal.timeout(20000)}); }
+  catch { throw new Error('Não foi possível baixar o retrato COMP/CON. Confira se a imagem está publicada e permite acesso pelo navegador.'); }
+  if (!response.ok) throw new Error(`O retrato COMP/CON respondeu com erro ${response.status}.`);
+  if (Number(response.headers?.get('content-length')) > 30*1024*1024) throw new Error('O retrato excede 30 MB.');
+  const blob = await response.blob();
+  if (!blob.size || blob.size > 30*1024*1024) throw new Error('Retrato vazio ou maior que 30 MB.');
+  const data = new Uint8Array(await blob.slice(0,12).arrayBuffer());
+  const ascii = new TextDecoder().decode(data);
+  const type = data[0]===137 && ascii.slice(1,4)==='PNG' ? 'image/png'
+    : data[0]===255 && data[1]===216 && data[2]===255 ? 'image/jpeg'
+    : /^GIF8[79]a/.test(ascii) ? 'image/gif'
+    : ascii.slice(0,4)==='RIFF' && ascii.slice(8,12)==='WEBP' ? 'image/webp' : '';
+  if (!type) throw new Error('O endereço do retrato não devolveu uma imagem PNG/JPG/WebP/GIF válida.');
+  return new Blob([blob], {type});
+}
 export function shareCode(input) {
   const text = String(input || "").trim();
   let code = text.replaceAll("-", "").toUpperCase();

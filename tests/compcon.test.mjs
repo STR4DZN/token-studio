@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {shareCode,parsePilot,createSheet,validateSheet,downloadPilot,COMP_BUCKET,copy,setPath,mergePlan,applyMerge,diffData,entries,allActions,applyResolvedDamage,frequencyLimit} from '../src/compcon.js';
+import {pilotPortrait,downloadPortrait,shareCode,parsePilot,createSheet,validateSheet,downloadPilot,COMP_BUCKET,copy,setPath,mergePlan,applyMerge,diffData,entries,allActions,applyResolvedDamage,frequencyLimit} from '../src/compcon.js';
 export const pilot=()=>({itemType:'pilot',id:'pilot-1',name:'Teste',callsign:'T',level:3,mechSkills:[1,2,0,0],mechs:[],skills:[],talents:[],loadouts:[{name:'Principal',armor:[],weapons:[],gear:[]}],active_index:0,stats:{current:{hp:10,overshield:3},max:{hp:12}},extension:{nested:{value:'preservar'},list:[1,'x']}});
 test('links aceitam apenas o domínio, protocolo e código esperados',()=>{
  assert.equal(shareCode('https://compcon.app/link/pilot/1HM40U8YCU35/full/'),'1HM40U8YCU35');
@@ -52,4 +52,21 @@ test('frequência só limita formatos conhecidos, sem inferir regras especiais',
 
 test('projetos com metadados ou contadores corrompidos são recusados antes de renderizar',()=>{
  const sheet=createSheet(pilot());assert.throws(()=>validateSheet({...sheet,source:null}));assert.throws(()=>validateSheet({...sheet,source:{...sheet.source,filename:{bad:true}}}));assert.throws(()=>validateSheet({...sheet,tracking:{round:1,uses:{a:{bad:true}}}}));
+});
+
+test('retrato usa campos COMP/CON v3, aceita legado e recusa fontes inválidas',()=>{
+ assert.equal(pilotPortrait({img:{cloud_portrait:'https://img.test/cloud.webp',portrait:'https://img.test/local.png'}}),'https://img.test/cloud.webp');
+ assert.equal(pilotPortrait({cloud_portrait:'https://img.test/legacy.png'}),'https://img.test/legacy.png');
+ assert.equal(pilotPortrait({img:{portrait:'/img/pilot/a.webp'}}),'https://compcon.app/img/pilot/a.webp');
+ assert.equal(pilotPortrait({img:{portrait:'data:image/png;base64,iVBORw=='}}),'data:image/png;base64,iVBORw==');
+ assert.equal(pilotPortrait({}),'');
+ for(const source of ['javascript:alert(1)','http://img.test/a','https://u:p@img.test/a','data:text/html;base64,AA==',12]) assert.throws(()=>pilotPortrait({img:{cloud_portrait:source}}));
+});
+test('download identifica bytes da imagem e recusa páginas de erro, rede e excesso de tamanho',async()=>{
+ const signatures=[[[137,80,78,71,13,10,26,10],'image/png'],[[255,216,255,0],'image/jpeg'],[Array.from(Buffer.from('GIF89a000000')),'image/gif'],[Array.from(Buffer.from('RIFF0000WEBP')),'image/webp']];
+ for(const [bytes,type]of signatures){let options;const blob=await downloadPortrait('https://img.test/a',{fetcher:async(_,o)=>{options=o;return new Response(new Uint8Array(bytes),{headers:{'content-type':'application/octet-stream'}});}});assert.equal(blob.type,type);assert.equal(options.credentials,'omit');assert.deepEqual(new Uint8Array(await blob.arrayBuffer()),new Uint8Array(bytes));}
+ await assert.rejects(()=>downloadPortrait('https://img.test/a',{fetcher:async()=>new Response('<html>error</html>')}),/imagem.*válida/);
+ await assert.rejects(()=>downloadPortrait('https://img.test/a',{fetcher:async()=>new Response('',{status:404})}),/404/);
+ await assert.rejects(()=>downloadPortrait('https://img.test/a',{fetcher:async()=>{throw new Error('CORS');}}),/baixar/);
+ await assert.rejects(()=>downloadPortrait('https://img.test/a',{fetcher:async()=>new Response('x',{headers:{'content-length':String(31*1024*1024)}})}),/30 MB/);
 });

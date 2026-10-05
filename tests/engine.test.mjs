@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createProject,createView,geometry,constrain,outputSize,validateProject,presetFromView,applyPreset} from '../src/engine.js';
+import {isDefaultImage,syncPortraitProject} from '../src/actor-images.js';
 import {buildActorPatch,buildScenePatch,applyTransaction} from '../foundry/transaction.js';
 test('retratos e tokens têm estados independentes e preservam a origem',()=>{const p=createProject('original.png');p.views.token.x=.4;p.views.token.zoom=2;assert.equal(p.views.portrait.x,0);assert.equal(p.views.portrait.zoom,1);assert.equal(p.views.token.src,'original.png');assert.notEqual(p.views.token,p.views.portrait);});
 test('Preencher cobre todos os cantos sem deformar, mesmo com rotação e imagens extremas',()=>{
@@ -20,3 +21,10 @@ test('aplicação atualiza apenas os tokens informados e usa uma única atualiza
 test('falha na cena restaura ficha, token padrão e tokens da cena',async()=>{const f=fixture();let call=0;f.scene.updateEmbeddedDocuments=async(type,p)=>{f.sceneCalls.push(p);if(!call++)throw new Error('fail');};await assert.rejects(applyTransaction(f),/anteriores foram restauradas/);assert.equal(f.actorCalls[1].img,'old-portrait');assert.equal(f.actorCalls[1]['prototypeToken.texture.src'],'old-token');assert.equal(f.sceneCalls[1][0]['texture.src'],'old-scene');assert.equal(f.sceneCalls[1][0]['ring.subject.texture'],'old-scene-subject');});
 test('falha na atualização do ator não inicia atualização de cena',async()=>{const f=fixture();f.actor.update=async()=>{throw new Error('permission');};await assert.rejects(applyTransaction(f),/permission/);assert.equal(f.sceneCalls.length,0);});
 test('falha na restauração não é apresentada como sucesso',async()=>{const f=fixture();f.scene.updateEmbeddedDocuments=async()=>{throw new Error('offline');};await assert.rejects(applyTransaction(f),/Confira a ficha/);});
+
+test('novo retrato preserva o token personalizado e só substitui arte padrão',()=>{
+ const project=createProject('old.png');Object.assign(project.views.token,{src:'custom.webp',zoom:2.7,x:.4,rotation:35,frame:'gold'});const before=structuredClone(project);
+ const next=syncPortraitProject(project,'compcon.webp');assert.equal(next.views.portrait.src,'compcon.webp');assert.deepEqual(next.views.token,before.views.token);assert.deepEqual(project,before);
+ project.views.token.src='/vtt/modules/token-studio/assets/pilot.png';const seeded=syncPortraitProject(project,'compcon.webp');assert.equal(seeded.views.token.src,'compcon.webp');assert.equal(seeded.views.token.zoom,2.7);assert.equal(seeded.views.token.frame,'gold');
+ assert.ok(isDefaultImage('/vtt/systems/lancer/assets/icons/white/pilot.svg'));assert.ok(!isDefaultImage('my-pilot.svg'));assert.ok(!isDefaultImage('systems/lancer/assets/my-custom.png'));
+});

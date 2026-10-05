@@ -3,7 +3,13 @@ import { App } from "./App.jsx";
 import { SheetEditor } from "./SheetEditor.jsx";
 export function Suite({ host = {} }) {
   const [mode, setMode] = useState(host.initialMode || "images"),
-    [sheetVisited, setSheetVisited] = useState(host.initialMode === "sheet");
+    [sheetVisited, setSheetVisited] = useState(host.initialMode === "sheet"),
+    [actorState,setActorState] = useState({});
+  const boundHost = {...host,...actorState};
+  function sheetApplied(result) {
+    setActorState(current=>({...current,...result}));
+    host.onSheetApplied?.(result);
+  }
   useEffect(() => {
     if (host.mode) {
       setMode(host.mode);
@@ -39,11 +45,11 @@ export function Suite({ host = {} }) {
         </span>
       </nav>
       <div className="ts-suite-pane" hidden={mode !== "images"}>
-        <App host={host} />
+        <App host={boundHost} />
       </div>
       {sheetVisited && (
         <div className="ts-suite-pane" hidden={mode !== "sheet"}>
-          <SheetEditor host={host} />
+          <SheetEditor host={{...boundHost,onSheetApplied:sheetApplied}} />
         </div>
       )}
     </div>

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.5 — 2026-10-05
+
+- Vincula a ficha COMP/CON ao piloto nativo: dados existentes, código público, data de sincronização e origem registrada no ator. O token padrão acompanha o nome e fica vinculado ao piloto.
+- Importa o retrato v3/legado/embutido, valida e guarda o original no Foundry, atualiza a imagem da ficha e o editor já aberto.
+- Preserva arte, moldura, enquadramento, escala e demais ajustes de tokens personalizados; usa o retrato somente quando a arte do token é padrão.
+- Acrescenta retrato à revisão, ativa identidade/retrato/build/recursos/mechas por padrão e mantém a aplicação explícita. Mostra o retrato e o estado do vínculo na ficha do mestre.
+- Reconfere alterações concorrentes após download e backup; recupera imagem e token junto dos dados quando a aplicação falha.
+- Dez regressões novas cobrem vínculo completo, atualização, FilePicker e retorno ao editor, falhas de imagem, concorrência e restauração. Foundry 13 + Lancer reais ainda requerem confirmação.
+
 ## 0.2.4
 
 - Corrige a junção dos caminhos das imagens quando a rota de assets não termina em barra, preservando prefixos do servidor.

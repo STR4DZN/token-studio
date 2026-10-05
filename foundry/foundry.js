@@ -1,11 +1,15 @@
 import { mountEditor } from './editor.js';
 import { assetPath } from './asset-path.js';
+import { isDefaultImage } from './actor-images.js';
+import { downloadPortrait } from './compcon.js';
 import { applyTransaction } from './transaction.js';
 import {prepareSheetPlan,applySheetPlan,readNativePilot}from'./sheet-adapter.js';
 const ID = 'token-studio';
 let EditorClass;
 const windows = new Map();
 const route = path => foundry.utils.getRoute(path);
+const imageRoute = source => /^(?:https?:|data:)/i.test(source) ? source : route(source);
+const actorSource = actor => isDefaultImage(actor.img) ? route(`modules/${ID}/assets/pilot.png`) : imageRoute(actor.img);
 const picker = () => foundry.applications.apps.FilePicker.implementation;
 const actorOf = app => app.actor || (app.document?.documentName === 'Actor' ? app.document : app.object?.documentName === 'Actor' ? app.object : null);
 function fail(error) { console.error('Token Studio', error); ui.notifications.error(error.message || 'Token Studio: não foi possível abrir.'); }
@@ -38,6 +42,19 @@ async function persistEmbeddedSources(actor, project) {
   }
   return saved;
 }
+async function storePortrait(actor, source) {
+  const blob = await downloadPortrait(source);
+  const url = URL.createObjectURL(blob);
+  try {
+    await new Promise((resolve,reject)=>{
+      const image = new Image();
+      image.onload = resolve;
+      image.onerror = ()=>reject(new Error('O retrato COMP/CON não pôde ser decodificado. Nenhum dado do ator foi alterado.'));
+      image.src = url;
+    });
+  } finally { URL.revokeObjectURL(url); }
+  return upload(actor, blob, 'compcon-originals');
+}
 function selectedTokens(actor) { return (canvas.tokens?.controlled || []).filter(t => t.document.actorId === (actor.parent ? actor.parent.actorId : actor.id)).map(t => t.document); }
 async function open(actor, token = null, mode = 'images') {
   if (!game.user.isGM) throw new Error('O Token Studio está disponível para o mestre.');
@@ -63,13 +80,13 @@ Hooks.once('init', () => {
       content.replaceChildren(result);
       const actor = this.actor;
       const project = actor.getFlag(ID, 'project');
-      const source = actor.img && !actor.img.endsWith('mystery-man.svg') ? (/^(?:https?:|data:)/i.test(actor.img)?actor.img:route(actor.img)) : route(`modules/${ID}/assets/pilot.png`);
-      const tokenSource=actor.prototypeToken.texture.src;
+      const source = actorSource(actor);
+      const tokenSource=isDefaultImage(actor.prototypeToken.texture.src)?null:imageRoute(actor.prototypeToken.texture.src);
       this._unmount = mountEditor(result, {
         isFoundry:true, initialMode:this.initialMode,actorUuid:actor.uuid,sheetProject:actor.getFlag(ID,'sheetProject'),shareLink:actor.system?.cloud_id?.length===12?`https://compcon.app/link/pilot/${actor.system.cloud_id}/full/`:undefined,
         readActorSheet:()=>readNativePilot(actor,game),openItem:async uuid=>(await fromUuid(uuid))?.sheet?.render(true),
         prepareSheetApply:(sheet,parts)=>prepareSheetPlan({actor,sheet,parts,game,validateItem:async(data,parent)=>{const candidate=new CONFIG.Item.documentClass(data,{parent});candidate.validate({strict:true});}}),
-        applySheet:async(plan,sheet)=>{const result=await applySheetPlan({plan,sheet,game,createActor:data=>CONFIG.Actor.documentClass.create(data),saveBackup:async snapshots=>{plan.backupPath=await upload(actor,new Blob([JSON.stringify({schema:'token-studio-foundry-backup-1',createdAt:Date.now(),world:game.world.id,documents:snapshots},null,2)],{type:'application/json'}),'backups');}});ui.notifications.info(`Token Studio: ficha aplicada. Backup: ${plan.backupPath}`);return result;},
+        applySheet:async(plan,sheet)=>{const result=await applySheetPlan({plan,sheet,game,resolvePortrait:storePortrait,createActor:data=>CONFIG.Actor.documentClass.create(data),saveBackup:async snapshots=>{plan.backupPath=await upload(actor,new Blob([JSON.stringify({schema:'token-studio-foundry-backup-1',createdAt:Date.now(),world:game.world.id,documents:snapshots},null,2)],{type:'application/json'}),'backups');}});ui.notifications.info(`Token Studio: ficha aplicada. Backup: ${plan.backupPath}`);return {...result,name:actor.name,source:actorSource(actor),tokenSource:isDefaultImage(actor.prototypeToken.texture.src)?null:imageRoute(actor.prototypeToken.texture.src),shareLink:actor.system.cloud_id?`https://compcon.app/link/pilot/${actor.system.cloud_id}/full/`:'',sheetProject:actor.getFlag(ID,'sheetProject'),imageUpdate:result.portrait?{id:foundry.utils.randomID(),source:imageRoute(result.portrait)}:null};},
         assetsBase:assetPath(route(`modules/${ID}/assets`)), name:actor.name, type:({pilot:'Piloto',mech:'Mech',npc:'NPC',deployable:'Deployable'})[actor.type] || actor.type,
         key:`${game.world.id}:${actor.uuid}:${game.user.id}`, source, project, tokenSource:tokenSource && !tokenSource.includes('mystery-man') && tokenSource!==actor.img ? tokenSource:null, sceneCount:selectedTokens(actor).length,getSceneCount:()=>selectedTokens(actor).length,
         presets:game.settings.get(ID, 'presets'), savePresets:items => game.settings.set(ID, 'presets', items),

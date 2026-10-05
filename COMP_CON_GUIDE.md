@@ -1,4 +1,4 @@
-# Ficha do mestre — Token Studio 0.2.1
+# Ficha do mestre — Token Studio 0.2.5
 
 ## Carregar e revisar
 
@@ -30,11 +30,15 @@ O projeto de ficha aplicado ao ator contém a ficha completa e a origem. Permiss
 
 Abra em um ator **piloto**, usando o sistema **Lancer** e uma conta de mestre. A leitura nativa inclui o piloto, seus itens equipados e os mechas do mundo vinculados a ele. Mechas existentes não vinculados não são adotados automaticamente.
 
-Em **Revisar alterações**, escolha identidade, build, recursos atuais e mechas. Recursos e mechas começam desmarcados. Se um item externo tiver o mesmo tipo/ID, a revisão bloqueia duplicação e oferece adoção explícita. Por padrão, itens externos e itens gerenciados antigos são preservados; uma opção permite remover somente os gerenciados ausentes na build importada. Confira isso para não manter bônus antigos por engano. A mesma instância em vários loadouts vira um único item no Foundry.
+Após importar, clique **Vincular / atualizar ator…**. Escolha identidade/vínculo, retrato, build, recursos atuais e mechas; todos começam selecionados para uma importação completa. Desmarque recursos se precisar preservar o combate em andamento. Revise e aplique para atualizar o ator; carregar ou editar o rascunho sozinho não escreve na ficha nativa. Se um item externo tiver o mesmo tipo/ID, a revisão bloqueia duplicação e oferece adoção explícita. Por padrão, itens externos e itens gerenciados antigos são preservados; uma opção permite remover somente os gerenciados ausentes na build importada. Confira isso para não manter bônus antigos por engano. A mesma instância em vários loadouts vira um único item no Foundry.
 
 A revisão apresenta documentos/campos, estados anteriores e posteriores, avisos e impedimentos de schema. A integração valida itens com o schema disponível no seu Lancer antes de escrever. Definições embutidas de deployables ficam preservadas; não criam atores de deployable. Condições registradas na cópia não geram ActiveEffects automaticamente. O build nativo de mechas usa o loadout ativo; demais loadouts ficam guardados no projeto. Campos homebrew não suportados pelo schema ficam no projeto, mas podem não produzir efeitos nativos.
 
-Antes de escrever, o módulo compara novamente a ficha/rascunho com a revisão e cria um JSON de backup na pasta de saída. Arte, token e projeto de imagem não pertencem à operação de ficha. Em falha, tenta restaurar os documentos alterados; mostra erro explícito se a restauração falhar. Isso é compensação de falha, não uma transação atômica entre todos os clientes: suspenda edições simultâneas durante a aplicação.
+O vínculo grava o UUID do ator, ID do piloto e código público no projeto e no ator; `system.cloud_id` e `system.last_cloud_update` alimentam a identificação e o estado de sincronização da ficha nativa. Importações JSON usam também o código legado `cloudID`, quando válido. O token padrão recebe o nome do piloto e `actorLink: true`. Tokens já colocados na cena não são convertidos por essa operação.
+
+O retrato é lido de `img.cloud_portrait`/`img.portrait`, com suporte aos campos legados e imagens PNG/JPG/WebP/GIF embutidas. É baixado sem credenciais, validado/decodificado e guardado na pasta de saída, fora do módulo. A imagem atual do ator e o retrato no editor são atualizados, inclusive com o editor já aberto. A arte e todos os ajustes de um token personalizado são preservados. Somente uma arte padrão/vazia de token recebe o retrato como ponto de partida. Ajustes locais ainda não aplicados no editor são preservados. Uma ficha sem retrato conserva a imagem existente; falha de download impede a aplicação ao ator. A ficha do mestre também mostra o retrato de origem.
+
+Antes de escrever, o módulo compara novamente a ficha/origem e os atores com a revisão após o download e após criar o JSON de backup. Em falha, tenta restaurar dados, imagem, token padrão e projeto dos documentos alterados; mostra erro explícito se a restauração falhar. Isso é compensação de falha, não uma transação atômica entre todos os clientes: suspenda edições simultâneas durante a aplicação.
 
 O backup contém `documents`, com os estados completos anteriores dos atores. Não há botão de restauração de backup nesta versão. Para recuperar manualmente, guarde uma cópia do mundo e extraia cada entrada de `documents` para um JSON individual; importe-a pelo menu de importação do ator correspondente no Foundry. A criação de um mecha novo que falhar é revertida pela exclusão do documento recém-criado.
 

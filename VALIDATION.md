@@ -1,4 +1,11 @@
-# Validação — Token Studio 0.2.5
+# Validação — Token Studio 0.2.6
+
+## Navegação e controles na 0.2.6
+
+- 59 testes de domínio/bootstrap, cinco testes do pacote compilado e quatro testes da prévia. Os seis novos testes cobrem scroll e limites, favoritas persistidas/ordenadas, isolamento de ações/loadouts e retorno ao piloto após remover o mecha selecionado.
+- Exercitado no navegador: roda real do mouse no token/retrato com desfazer, favoritos após recarregar e seleção do original, edição/desfazer, teclado nas abas, dois mechas com loadouts/ações distintos e retorno ao piloto após desfazer importação em Combate.
+- Comparação visual antes/depois em 1363 × 936; perfil tático revisado com a ficha pública de referência. Fontes: componentes oficiais de navegação narrativa/tática e hangar em massifpress/compcon.
+- Build, manifestos e ZIP são conferidos antes da publicação. Os testes de integração usam documentos simulados; Foundry 13 + Lancer reais continuam pendentes.
 
 ## Vínculo COMP/CON na 0.2.5
 

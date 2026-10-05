@@ -82,3 +82,32 @@ A extensão segue o tema escuro/violeta da opção 1; não existe mock seleciona
 Link público carregado, arquivo JSON importado, edição/revisão/desfazer/refazer e rascunho recuperado. Dano/overshield/recuperação, frequência/rodada, filtro de coleções/favoritas e seleção de borda testados no navegador. Compensação de falhas, mechas e concorrência testados com documentos simulados. Integração real Foundry/Lancer e transporte de download não confirmados; ver VALIDATION.md.
 
 final result: passed (revisão visual desktop; não valida integração real)
+
+
+## Revisão 0.2.6 — controles e ficha
+
+**Target and evidence**
+
+Revisão da interface existente a pedido do usuário, preservando carvão/violeta da opção 1. Estrutura baseada nos componentes oficiais PilotNav, MechNav e perfis narrativa/tático de massifpress/compcon; não há novo mock a reproduzir. Comparação conjunta `token-sheet-comparison.jpg`, capturas antes/depois em 1363 × 936, densidade 1; perfil tático final `token-studio-v026-ficha.jpg`.
+
+**Findings and comparison history**
+
+- Corrigido P2: título afastado do retrato e contexto de unidade repetido. Identidade compacta, seletor persistente e navegação em três grupos.
+- Corrigido P2: leitura parecia formulário desabilitado; valores e HASE agora têm hierarquia numérica, com inputs apenas na edição.
+- Corrigido P2: descrições longas dominavam os cartões. Resumos limitados a três linhas, ranks adquiridos visíveis e regras completas expansíveis; categorias em abas com teclado.
+- Corrigido P1 encontrado na regressão: desfazer a importação de mechas enquanto Combate estava aberto acessava unidade removida. Índice é normalizado antes de renderizar; repetição do mesmo fluxo retornou ao piloto sem erro.
+- Sem P0/P1/P2 restante na revisão desktop. P3: revisão dedicada em smartphone ainda não realizada.
+
+| Superfície | Avaliação |
+| --- | --- |
+| Tipografia | Inter, títulos compactos, valores claros e ranks com labels/ícones. |
+| Layout | Dez seções em grupos, contexto persistente, cartões em duas colunas, rolagem interna e rodapé alcançável. |
+| Cores | Carvão/violeta preservados; leitura/edição, seleção, ranks e inativas têm texto além da cor. |
+| Imagens | Retrato preservado; atalhos usam miniaturas reais, seleção carrega original sem alterar proporção. |
+| Conteúdo | Narrativa/tática/hangar, mecha/loadout escolhido, ações ativas isoladas, dados adicionais preservados. |
+
+**Interactions and limits**
+
+Roda real aumentou/reduziu zoom do token e retrato independentemente; desfazer restaurou um gesto. Favoritas persistiram após recarregar, ficaram primeiro e aplicaram o original pelo atalho. Edição e desfazer, abas com ArrowRight/Home, dois mechas, loadout reserva e ações inativas foram exercitados. Erro de aplicação durante a regressão foi corrigido e retestado; avisos da extensão de automação não pertencem à origem da aplicação. Integração Foundry/Lancer real ainda pendente.
+
+final result: passed (desktop; integração real pendente)

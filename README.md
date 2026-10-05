@@ -1,4 +1,4 @@
-# Token Studio — v0.2.5
+# Token Studio — v0.2.6
 
 Editor independente de retratos e tokens, catálogo de molduras e painel de ficha COMP/CON para o mestre. Interface baseada na proposta visual escolhida: tema escuro, destaque violeta, imagem grande e controles diretos.
 
@@ -30,7 +30,7 @@ Abra Token Studio no ator piloto → **Ficha do mestre** → importe o link/cód
 
 - Escolha **Retrato** ou **Token**. Cada um tem imagem e enquadramento próprios.
 - Importe uma imagem por **Trocar imagem**, arraste um arquivo para a janela ou cole uma imagem. No Foundry, Trocar imagem abre o seletor de arquivos; arquivos locais também podem ser arrastados/colados.
-- Arraste a arte para posicionar. O zoom mantém a proporção. As setas do teclado também movem a arte; Shift aumenta o passo.
+- Arraste a arte para posicionar e role a roda do mouse sobre ela para aumentar ou diminuir o zoom. O gesto entra no desfazer e mantém os ajustes de retrato/token independentes. O zoom mantém a proporção. As setas do teclado também movem a arte; Shift aumenta o passo.
 - **Preencher** limita o movimento para evitar espaços vazios. **Mostrar inteira** começa mostrando a imagem completa. **Livre** permite deslocar e reduzir sem limites de preenchimento.
 - **Importar borda**, ao lado do título Moldura, aceita PNG/WebP com transparência. A abertura central fechada é detectada automaticamente. Bordas abertas podem ser ajustadas manualmente em Avançado.
 - O painel **Avançado** contém rotação, formato do retrato, recorte, opacidade, área interna, presets, histórico e importação/exportação do projeto. **Usar imagem do retrato/token** reutiliza a origem sem copiar o enquadramento.
@@ -39,11 +39,13 @@ Abra Token Studio no ator piloto → **Ficha do mestre** → importe o link/cód
 
 ## Molduras do seu pacote
 
+As molduras favoritadas aparecem primeiro no catálogo e até seis atalhos ficam na tela inicial, persistindo neste navegador.
+
 **Escolher do catálogo** oferece 330 molduras transparentes, divididas em coleções, com busca, favoritas e páginas de 24 miniaturas. As 356 imagens originais do RAR foram preservadas byte a byte; 26 fundos/máscaras opacos continuam em `assets/frames`, sem aparecer como moldura. Bordas com abertura fechada são detectadas automaticamente; bordas abertas exigem conferir o recorte manual. Nomes originais e coleções estão em `assets/frames/credits.json`. O pacote não atribui uma licença nova às artes fornecidas por você.
 
 ## Ficha do mestre
 
-Mude para **Ficha do mestre**, cole o link público COMP/CON v3 e carregue. Ative Editar ficha para modificar sua cópia; atualizações têm revisão por grupo e preservam alterações locais por padrão. O painel cobre identidade, HASE, biografia, habilidades/ranks/ações, equipamentos, mechas, recursos, notas locais do mestre, histórico e JSON completo. Os homebrews e campos adicionais permanecem no projeto.
+Mude para **Ficha do mestre**, cole o link público COMP/CON v3 e carregue. Ative Editar ficha para modificar sua cópia; atualizações têm revisão por grupo e preservam alterações locais por padrão. A navegação separa **Perfil narrativo**, **Perfil tático**, **Loadout do piloto** e **Hangar**. O seletor de unidade acompanha a navegação; ações, combate e equipamentos mostram o piloto ou mecha escolhido. O perfil tático agrupa gatilhos, talentos, licenças e core bonuses em abas, com ranks adquiridos e regras completas expansíveis. No hangar, selecione o mecha e seu loadout para consultar frame, traits, core system, montagens, armas e sistemas. **Editar ficha** abre os campos editáveis; o modo de leitura apresenta valores claros. JSON e histórico ficam nas ferramentas do mestre. Os homebrews e campos adicionais permanecem no projeto.
 
 No Foundry, **Revisar alterações** separa identidade/build/combate/mechas, mostra alterações antes de aplicar e salva um backup. A edição remota da conta COMP/CON não está implementada: você edita sua cópia e/ou documentos Foundry autorizados. Efeitos de ações, regras especiais, rolagens e derivados da cópia não são automatizados integralmente. Leia [COMP_CON_GUIDE.md](COMP_CON_GUIDE.md) para entender os destinos, conflitos e limites.
 

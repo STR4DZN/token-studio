@@ -881,3 +881,49 @@
 .token-studio-window {
   min-height: 720px;
 }
+
+/* Sheet navigation follows narrative / tactical / hangar while keeping the editor theme. */
+.ts-sheet-header {padding:16px 28px 12px;}
+.ts-sheet-header > div:not(.ts-sheet-header-actions) {flex:1;min-width:0;}
+.ts-sheet-avatar {width:62px;height:74px;}
+.ts-sheet-context {display:flex;align-items:center;gap:18px;padding:0 28px 14px;flex:none;flex-wrap:wrap;}
+.ts-sheet-context .ts-sheet-unit-select {margin:0;}
+.ts-sheet-context-hint {margin-left:auto;color:var(--ts-muted);font-size:11px;}
+.ts-sheet-mode {display:flex;align-items:center;gap:7px;font-size:11px;color:var(--ts-muted);}
+.ts-sheet-mode.is-editing {color:#ddd0ff;}
+.ts-sheet-sidebar {gap:2px;padding:10px;}
+.ts-sheet-sidebar button {padding:9px 10px!important;}
+.ts-sheet-nav-group {text-transform:uppercase;color:var(--ts-muted);letter-spacing:1px;font-size:9px;padding:12px 10px 6px;}
+.ts-sheet-tabs {display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 18px;}
+.ts-sheet-tabs button {display:flex;gap:8px;align-items:center;padding:10px 12px!important;border:1px solid var(--ts-border);border-radius:8px;font-size:12px;}
+.ts-sheet-tabs button[aria-selected="true"] {background:#383049;color:#dfd3ff;border-color:#75628b;}
+.ts-sheet-tabs small {color:var(--ts-muted);font-size:10px;}
+.ts-sheet-value strong {color:var(--ts-text);font-size:17px;font-weight:600;overflow-wrap:anywhere;padding:4px 0;white-space:pre-wrap;}
+.ts-sheet-hase .ts-sheet-value {text-align:center;padding:12px;background:#202126;border-radius:8px;}
+.ts-sheet-hase .ts-sheet-value strong {font-size:24px;}
+.ts-sheet-rule-preview {max-height:68px;overflow:hidden;margin-bottom:12px;}
+.ts-sheet-rule-preview .ts-sheet-rules {display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.ts-sheet-rule-preview .ts-sheet-rules p {margin:0;}
+.ts-sheet-inactive {opacity:.7;}
+.ts-sheet-rank-track {display:flex;gap:6px;margin:12px 0;}
+.ts-sheet-rank-track span {padding:5px 9px;border:1px solid var(--ts-border);border-radius:6px;font-size:10px;color:var(--ts-muted);}
+.ts-sheet-rank-track .is-acquired {background:#373048;color:#dfd3ff;border-color:#75628b;}
+.ts-sheet-empty-category {border:1px dashed var(--ts-border);border-radius:10px;padding:30px;text-align:center;color:var(--ts-muted);}
+.ts-sheet-hangar {display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:20px;}
+.ts-sheet-mech-choice {display:flex;align-items:center;gap:13px;padding:16px!important;border:1px solid var(--ts-border);border-radius:10px;text-align:left;}
+.ts-sheet-mech-choice > i {font-size:22px;color:var(--ts-accent);}
+.ts-sheet-mech-choice span {display:flex;flex-direction:column;gap:5px;}
+.ts-sheet-mech-choice small {color:var(--ts-muted);font-size:11px;}
+.ts-sheet-mech-choice[aria-pressed="true"] {background:#383049;border-color:#75628b;}
+.ts-sheet-mount-label {color:var(--ts-accent);font-size:11px;margin:16px 0 8px;}
+.ts-sheet-profile {border-top:1px solid var(--ts-border);padding:12px 0;}
+.ts-sheet-unit-select label {display:flex;gap:10px;align-items:center;color:var(--ts-muted);font-size:12px;}
+.ts-sheet-resource-reading {font-size:25px;display:flex;gap:6px;align-items:baseline;}
+.ts-sheet-resource-reading small {font-size:14px;color:var(--ts-muted);}
+.ts-favorite-shortcuts {margin-bottom:14px;}
+.ts-favorite-shortcuts > small {display:block;margin-bottom:8px;color:var(--ts-accent);font-size:11px;}
+.ts-favorite-shortcuts > div {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;}
+.ts-favorite-choice {display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;padding:6px!important;background:#202126;border:1px solid var(--ts-border);border-radius:8px;}
+.ts-favorite-choice img {width:44px;height:44px;object-fit:contain;}
+.ts-favorite-choice span {font-size:9px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+@media(max-width:760px){.ts-sheet-context{padding:0 18px 14px;gap:10px;}.ts-sheet-context-hint{margin-left:0;}.ts-sheet-nav-group{display:none;}}

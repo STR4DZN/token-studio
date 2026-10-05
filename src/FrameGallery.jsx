@@ -1,33 +1,14 @@
 import React, { useMemo, useState } from "react";
 import catalog from "./frame-catalog.json";
+import {frameChoices,readFavorites} from './editor-controls.js';
 import { assetPath } from './asset-path.js';
 export function FrameGallery({ assetsBase, onChoose, onClose, busy }) {
   const [query, setQuery] = useState(""),
     [author, setAuthor] = useState(""),
     [page, setPage] = useState(0),
     [onlyFavorites, setOnlyFavorites] = useState(false),
-    [favorites, setFavorites] = useState(() => {
-      try {
-        return JSON.parse(
-          localStorage.getItem("token-studio-frame-favorites") || "[]",
-        );
-      } catch {
-        return [];
-      }
-    });
-  const items = useMemo(
-    () =>
-      catalog.filter(
-        (f) =>
-          f.kind === "frame" &&
-          (!author || f.author === author) &&
-          (!onlyFavorites || favorites.includes(f.id)) &&
-          `${f.name} ${f.author} ${f.original}`
-            .toLowerCase()
-            .includes(query.toLowerCase()),
-      ),
-    [query, author, onlyFavorites, favorites],
-  );
+    [favorites, setFavorites] = useState(readFavorites);
+  const items = useMemo(()=>frameChoices(catalog,favorites,{query,author,onlyFavorites}),[query,author,onlyFavorites,favorites]);
   const pages = Math.max(1, Math.ceil(items.length / 24)),
     current = Math.min(page, pages - 1);
   function favorite(id) {
@@ -35,6 +16,7 @@ export function FrameGallery({ assetsBase, onChoose, onClose, busy }) {
       ? favorites.filter((x) => x !== id)
       : [...favorites, id];
     setFavorites(next);
+    setPage(0);
     try {
       localStorage.setItem(
         "token-studio-frame-favorites",
@@ -62,7 +44,7 @@ export function FrameGallery({ assetsBase, onChoose, onClose, busy }) {
         <h2 id="ts-dialog-title">Suas molduras</h2>
         <p>
           {catalog.filter((f) => f.kind === "frame").length} molduras do pacote.
-          O original só é carregado quando você escolhe.
+          Favoritas aparecem primeiro. O original só é carregado quando você escolhe.
         </p>
         <div className="ts-gallery-filters">
           <input
@@ -121,7 +103,7 @@ export function FrameGallery({ assetsBase, onChoose, onClose, busy }) {
               </button>
               <button
                 className="ts-gallery-star ts-info"
-                aria-label={`Favoritar ${f.name}`}
+                aria-label={`${favorites.includes(f.id) ? "Desfavoritar" : "Favoritar"} ${f.name}`}
                 aria-pressed={favorites.includes(f.id)}
                 onClick={() => favorite(f.id)}
               >

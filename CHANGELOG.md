@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.6 — 2026-10-05
+
+- Adiciona zoom pela roda do mouse no palco de token/retrato, com limites de enquadramento e um desfazer por gesto; evita rolagem da janela durante o zoom.
+- Coloca favoritas primeiro no catálogo e até seis atalhos na tela inicial, preservando busca, coleções e preferências salvas.
+- Reorganiza a ficha em perfil narrativo, perfil tático, loadout do piloto e hangar, seguindo os contextos do COMP/CON. Mantém o seletor de unidade sempre acessível.
+- Separa ações ativas por piloto/mecha, com busca, tipo e opção de consultar inativas. Agrupa talentos e demais categorias em abas navegáveis pelo teclado, com ranks adquiridos e regras expansíveis.
+- Mostra apenas o loadout selecionado de cada mecha, com frame, traits, core system e indicação de montagens; melhora valores no modo de leitura e mantém edição e dados adicionais.
+- Corrige a seleção ao desfazer/remover um mecha: retorna ao piloto antes da renderização. Seis testes de regressão novos; integração real Foundry/Lancer continua pendente.
+
 ## 0.2.5 — 2026-10-05
 
 - Vincula a ficha COMP/CON ao piloto nativo: dados existentes, código público, data de sincronização e origem registrada no ator. O token padrão acompanha o nome e fica vinculado ao piloto.

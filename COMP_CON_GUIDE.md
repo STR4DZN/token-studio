@@ -57,3 +57,12 @@ O resolvedor apenas baixa a cópia publicada para um novo arquivo, sem sobrescre
 ## Fontes e independência
 
 O adaptador próprio foi elaborado a partir do protocolo e schemas públicos de [COMP/CON](https://github.com/massif-press/compcon) e [Foundry VTT Lancer](https://github.com/Eranziel/foundryvtt-lancer). O código-fonte desses projetos não foi incorporado ao pacote. A consulta depende da disponibilidade da API pública; edição local, importação por arquivo, molduras e exportação não dependem do Tokenizer nem da disponibilidade do COMP/CON.
+
+
+## Navegação da ficha na 0.2.6
+
+**Perfil narrativo** reúne identidade, biografia, gatilhos e bond. **Perfil tático** separa gatilhos, talentos, licenças, core bonuses, reservas e organizações em abas. Os números dos ranks distinguem os adquiridos; as regras completas ficam em cartões expansíveis.
+
+O seletor **Unidade** permanece no topo. **Loadout do piloto** mostra apenas o loadout escolhido. No **Hangar**, escolha um mecha e seu loadout para ler frame, traits, core system, montagens e equipamentos. Ações e recursos respeitam a unidade selecionada; ações inativas exigem ativar **Mostrar inativas**. Escolher um loadout para consulta não altera automaticamente o loadout ativo. Em modo de edição há um comando explícito para torná-lo ativo.
+
+**Editar ficha** alterna da leitura para campos editáveis. Desfazer/refazer continua disponível; se o mecha selecionado deixar de existir, a ficha retorna ao piloto. A navegação não recalcula derivados nem automatiza efeitos especiais do Lancer.

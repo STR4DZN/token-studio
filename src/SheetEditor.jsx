@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import {loadoutEntries,unitActions,mountTitle,sheetUnitIndex} from "./sheet-navigation.js";
 import DOMPurify from "dompurify";
 import { readDraft, writeDraft } from "./storage.js";
 import {
@@ -129,6 +130,7 @@ function Field({
     }
     if (v !== value) onChange?.(v);
   }
+  if (disabled) return <div className="ts-sheet-field ts-sheet-value"><span>{label}</span><strong>{type==='boolean' ? (value?'Sim':'Não') : (value ?? '—')}</strong></div>;
   if (type === "boolean")
     return (
       <label className="ts-sheet-field">
@@ -310,7 +312,8 @@ function ItemCard({ entry, editing, edit, remove, host }) {
           <span>{d.range.map((x) => `${x.type} ${x.val}`).join(" • ")}</span>
         )}
       </div>
-      <Rules value={d.effect || d.terse || d.description} />
+      <div className="ts-sheet-rule-preview"><Rules value={d.terse || d.effect || d.description} /></div>
+      {entry.item.rank!=null && entry.kind!=='skills' && <div className="ts-sheet-rank-track" aria-label={`Rank adquirido: ${entry.item.rank}`}>{[1,2,3].map(rank=><span key={rank} className={rank<=entry.item.rank?'is-acquired':''}><Ic name={rank<=entry.item.rank?'check':'lock'}/> {rank}</span>)}</div>}
       {(d.actions?.length > 0 || d.ranks?.length > 0) && (
         <p className="ts-sheet-muted">
           {d.actions?.length
@@ -322,9 +325,11 @@ function ItemCard({ entry, editing, edit, remove, host }) {
       <details>
         <summary>Descrição e regras completas</summary>
         <Rules value={d.description} />
+        <Rules value={d.effect} />
         <Rules value={d.detail} />
+        {d.profiles?.map((profile,i)=><section className="ts-sheet-profile" key={i}><h4>{profile.name||`Perfil ${i+1}`}</h4><p>{profile.damage?.map(x=>`${x.val} ${x.type}`).join(" • ")}{profile.range?.length ? " · "+profile.range.map(x=>`${x.type} ${x.val}`).join(" • ") : ""}</p><Rules value={profile.effect}/><Rules value={profile.description}/></section>)}
         {d.ranks?.map((r, i) => (
-          <section key={i} className="ts-sheet-card">
+          <section key={i} className={`ts-sheet-card ${entry.item.rank<=i?"ts-sheet-inactive":""}`}>
             <h3>
               {i + 1}. {r.name} {entry.item.rank <= i ? "• não adquirido" : ""}
             </h3>
@@ -467,6 +472,7 @@ function Dialog({ title, onClose, children, wide = false, busy = false }) {
   );
 }
 function Resource({ name, current, max, onValue, onMax, editing }) {
+  if (!editing) return <article className="ts-sheet-resource"><h3>{name}</h3><div className="ts-sheet-resource-reading"><strong>{current??0}</strong>{max!=null && <small>/ {max}</small>}</div></article>;
   return (
     <div className="ts-sheet-resource">
       <label>{name}</label>
@@ -538,7 +544,10 @@ export function SheetEditor({ host = {} }) {
     [editing, setEditing] = useState(false),
     [query, setQuery] = useState(""),
     [category, setCategory] = useState(""),
-    [unitIndex, setUnitIndex] = useState(-1),
+    [abilityTab,setAbilityTab] = useState('talents'),
+    [includeInactive,setIncludeInactive] = useState(false),
+    [activation,setActivation] = useState(''),
+    [unitSelection, setUnitIndex] = useState(-1),
     [loadoutIndex, setLoadoutIndex] = useState(0),
     [modal, setModal] = useState(null),
     [busy, setBusy] = useState(false),
@@ -658,8 +667,10 @@ export function SheetEditor({ host = {} }) {
   const data = sheet?.data,
     all = useMemo(() => (data ? entries(data) : []), [data]),
     actions = useMemo(() => (data ? allActions(data) : []), [data]);
+  const unitIndex = sheetUnitIndex(data,unitSelection);
   const unit = unitIndex < 0 ? data : data?.mechs?.[unitIndex],
     unitPath = unitIndex < 0 ? [] : ["mechs", unitIndex];
+  useEffect(()=>{if(data){setUnitIndex(-1);setLoadoutIndex(data.active_index||0);}},[data?.id]);
   const portrait = useMemo(()=>{
     try { return pilotPortrait(unit) || (unitIndex < 0 ? host.source || '' : ''); }
     catch { return ''; }
@@ -939,7 +950,15 @@ export function SheetEditor({ host = {} }) {
     window.addEventListener("keydown", keyboard);
     return () => window.removeEventListener("keydown", keyboard);
   }, []);
+  function chooseUnit(index) {
+    setUnitIndex(index); setQuery('');setCategory('');setActivation('');
+    setLoadoutIndex(index<0 ? data.active_index||0 : data.mechs[index]?.active_loadout_index||0);
+    if(index>=0 && ['pilot','abilities','equipment'].includes(section))setSection('mechs');
+  }
   function selectSection(s) {
+    if(['pilot','abilities','equipment'].includes(s) && unitIndex>=0) chooseUnit(-1);
+    if(s==='equipment')setLoadoutIndex(data.active_index||0);
+    root.current?.querySelector('.ts-sheet-content')?.scrollTo({top:0});
     setSection(s);
     setQuery("");
     setCategory("");
@@ -950,16 +969,20 @@ export function SheetEditor({ host = {} }) {
       .includes(query.toLowerCase()) &&
     (!category || entry.kind === category);
   const navigation = [
-    ["overview", "Visão geral", "table-cells-large"],
-    ["pilot", "Piloto e biografia", "user-astronaut"],
-    ["abilities", "Habilidades", "bolt"],
-    ["equipment", "Equipamentos", "toolbox"],
-    ["mechs", "Mechas", "robot"],
+    ["overview", "Resumo", "table-cells-large"],
+    ["pilot", "Perfil narrativo", "user-astronaut"],
+    ["abilities", "Perfil tático", "bolt"],
+    ["equipment", "Loadout do piloto", "toolbox"],
+    ["mechs", "Hangar", "robot"],
+    ["actions", "Ações e efeitos", "bolt"],
     ["combat", "Combate e recursos", "shield-halved"],
     ["notes", "Notas do mestre", "lock"],
     ["source", "Importação e histórico", "cloud-arrow-down"],
     ["advanced", "Dados completos", "sliders"],
   ];
+  const scopedActions = unitActions(actions,unitIndex,{includeInactive,activation,query});
+  const viewedLoadout=Math.min(loadoutIndex,Math.max(0,(unit?.loadouts?.length||1)-1));
+  const equipmentEntries=loadoutEntries(all,unitIndex,viewedLoadout).filter(filter);
   const current = unit?.stats?.current || {},
     maximum = unit?.stats?.max || {};
   const primaryResources =
@@ -997,7 +1020,7 @@ export function SheetEditor({ host = {} }) {
         <select
           aria-label="Unidade da ficha"
           value={unitIndex}
-          onChange={(e) => setUnitIndex(Number(e.target.value))}
+          onChange={(e) => chooseUnit(Number(e.target.value))}
         >
           <option value={-1}>{data.callsign || data.name} • Piloto</option>
           {data.mechs.map((m, i) => (
@@ -1162,13 +1185,13 @@ export function SheetEditor({ host = {} }) {
             {portrait && <img className="ts-sheet-avatar" src={portrait} alt={`Retrato de ${unit?.name || data.name}`} />}
             <div>
               <div className="ts-sheet-eyebrow">
-                Ficha do mestre •{" "}
+                {unitIndex<0 ? "Piloto" : "Mecha"} •{" "}
                 {sheet.source?.code ? "COMP/CON" : "Cópia de trabalho"}
               </div>
-              <h1>{data.callsign || data.name}</h1>
+              <h1>{unitIndex<0 ? data.callsign || data.name : unit?.name}</h1>
               <p className="ts-sheet-subtitle">
-                {data.name} {data.player_name ? `• ${data.player_name}` : ""} •{" "}
-                {data.mechs.length} mecha(s) • {actions.length} ações descritas
+                {unitIndex<0 ? data.name : `${unit?.frameData?.name || unit?.frame || "Frame"} • Piloto: ${data.callsign || data.name}`} {data.player_name ? `• ${data.player_name}` : ""} •{" "}
+                {unitActions(actions,unitIndex,{includeInactive:true}).length} ações descritas
               </p>
             </div>
             <div className="ts-sheet-header-actions">
@@ -1194,9 +1217,16 @@ export function SheetEditor({ host = {} }) {
               </button>
             </div>
           </header>
+          <div className="ts-sheet-context" inert={busy?true:undefined}>
+            {unitSelect()}
+            <span className={`ts-sheet-mode ${editing?'is-editing':''}`}><Ic name={editing?'pen-to-square':'eye'}/>{editing?'Editando rascunho':'Modo leitura'}</span>
+            <span className="ts-sheet-context-hint">{host.isFoundry ? 'Aplique ao ator para confirmar as alterações.' : 'Alterações ficam na sua cópia local.'}</span>
+          </div>
           <div className="ts-sheet-layout" inert={busy ? true : undefined}>
             <aside className="ts-sheet-sidebar" aria-label="Seções da ficha">
-              {navigation.map(([id, name, icon]) => (
+              {navigation.map(([id, name, icon],index) => (
+                <React.Fragment key={id}>
+                {[0,4,7].includes(index) && <span className="ts-sheet-nav-group">{index===0?'Perfil do piloto':index===4?'Mecha e sessão':'Ferramentas do mestre'}</span>}
                 <button
                   key={id}
                   aria-pressed={section === id}
@@ -1204,8 +1234,10 @@ export function SheetEditor({ host = {} }) {
                 >
                   <Ic name={icon} />
                   {name}
-                  {id === "abilities" && <small>{actions.length}</small>}
+                  {id === "actions" && <small>{unitActions(actions,unitIndex).length}</small>}
+                  {id === 'mechs' && <small>{data.mechs.length}</small>}
                 </button>
+                </React.Fragment>
               ))}
               <div className="ts-sheet-source-info">
                 {sheet.source?.code ? (
@@ -1232,10 +1264,9 @@ export function SheetEditor({ host = {} }) {
               {section === "overview" && (
                 <>
                   {title(
-                    "Visão geral",
+                    "Resumo",
                     "Valores da última importação ou da sua edição. As regras completas estão nas seções ao lado.",
                   )}
-                  {unitSelect()}
                   <div className="ts-sheet-stats">
                     {[
                       "hp",
@@ -1269,13 +1300,13 @@ export function SheetEditor({ host = {} }) {
                       ))}
                   </div>
                   <article className="ts-sheet-card">
-                    <h3>HASE • Piloto</h3>
+                    <h3>Mech Skills • HASE</h3>
                     <div className="ts-sheet-hase">
                       {["Hull", "Agility", "Systems", "Engineering"].map(
                         (name, i) => (
                           <Field
                             key={name}
-                            label={name}
+                            label={`${name} • ${{Hull:"Casco",Agility:"Agilidade",Systems:"Sistemas",Engineering:"Engenharia"}[name]}`}
                             type="number"
                             min={0}
                             max={6}
@@ -1295,16 +1326,14 @@ export function SheetEditor({ host = {} }) {
                   </article>
                   <div className="ts-sheet-item-list">
                     <article className="ts-sheet-card">
-                      <h3>Build do piloto</h3>
+                      <h3>{unitIndex<0 ? "Build do piloto" : "Frame do mecha"}</h3>
                       <p className="ts-sheet-muted">
-                        {data.skills?.length || 0} gatilhos •{" "}
-                        {data.talents?.length || 0} talentos •{" "}
-                        {data.licenses?.length || 0} licenças •{" "}
-                        {data.core_bonuses?.length || 0} core bonuses
+                        {unitIndex>=0 ? unit?.frameData?.name||unit?.frame||"Frame não informado" : ""}
+                        {unitIndex<0 ? `${data.skills?.length || 0} gatilhos • ${data.talents?.length || 0} talentos • ${data.licenses?.length || 0} licenças • ${data.core_bonuses?.length || 0} core bonuses` : ""}
                       </p>
                       {all
                         .filter((x) =>
-                          ["talents", "core_bonuses"].includes(x.kind),
+                          unitIndex<0 && ["talents", "core_bonuses"].includes(x.kind),
                         )
                         .map((x) => (
                           <p className="ts-sheet-muted" key={x.key}>
@@ -1316,15 +1345,10 @@ export function SheetEditor({ host = {} }) {
                     <article className="ts-sheet-card">
                       <h3>Loadout em uso</h3>
                       <p className="ts-sheet-muted">
-                        {data.loadouts?.[data.active_index || 0]?.name ||
+                        {unit?.loadouts?.[unitIndex<0 ? data.active_index||0 : unit.active_loadout_index||0]?.name ||
                           "Não informado"}
                       </p>
-                      {all
-                        .filter(
-                          (x) =>
-                            ["armor", "weapons", "gear"].includes(x.kind) &&
-                            x.path[1] === (data.active_index || 0),
-                        )
+                      {loadoutEntries(all,unitIndex,unitIndex<0 ? data.active_index||0 : unit.active_loadout_index||0)
                         .map((x) => (
                           <p className="ts-sheet-muted" key={x.key}>
                             {x.name}
@@ -1337,7 +1361,7 @@ export function SheetEditor({ host = {} }) {
               {section === "pilot" && (
                 <>
                   {title(
-                    "Piloto e biografia",
+                    "Perfil narrativo",
                     "Identidade, nível, aparência e história.",
                   )}
                   <article className="ts-sheet-card">
@@ -1376,6 +1400,8 @@ export function SheetEditor({ host = {} }) {
                       ))}
                     </div>
                   </article>
+                  <div className="ts-sheet-section-title"><h3>Gatilhos de perícia</h3><button className="ts-button" onClick={()=>{setAbilityTab('skills');selectSection('abilities');}}>Abrir gatilhos</button></div>
+                  <div className="ts-sheet-item-list">{all.filter(e=>e.kind==='skills').map(e=><ItemCard key={e.key} entry={e} editing={editing} edit={edit} remove={remove} host={host}/>)}</div>
                   <article className="ts-sheet-card">
                     <h3>Bond, ideais e progresso</h3>
                     {data.bond ? (
@@ -1397,53 +1423,35 @@ export function SheetEditor({ host = {} }) {
               {section === "abilities" && (
                 <>
                   {title(
-                    "Habilidades e ações",
-                    "Descrições completas, ranks e frequência de uso. Registrar uso é um contador; não executa automaticamente o efeito.",
+                    "Perfil tático",
+                    "Gatilhos, talentos, licenças e core bonuses. Abra um cartão para consultar suas regras ou editar o conteúdo.",
                   )}
-                  {search([
-                    "skills",
-                    "talents",
-                    "licenses",
-                    "core_bonuses",
-                    "reserves",
-                    "orgs",
-                  ])}
-                  <div className="ts-sheet-item-list">
-                    {all
-                      .filter(
-                        (x) =>
-                          [
-                            "skills",
-                            "talents",
-                            "licenses",
-                            "core_bonuses",
-                            "reserves",
-                            "orgs",
-                          ].includes(x.kind) && filter(x),
-                      )
-                      .map((e) => (
-                        <ItemCard
-                          key={e.key}
-                          entry={e}
-                          editing={editing}
-                          edit={edit}
-                          remove={remove}
-                          host={host}
-                        />
-                      ))}
+                  <div className="ts-sheet-tabs" role="tablist" aria-label="Categorias do perfil tático">
+                    {['skills','talents','licenses','core_bonuses','reserves','orgs'].map(kind=><button role="tab" key={kind} id={`ts-ability-${kind}`} aria-controls="ts-ability-panel" tabIndex={abilityTab===kind?0:-1} aria-selected={abilityTab===kind} onKeyDown={event=>{const tabs=['skills','talents','licenses','core_bonuses','reserves','orgs'];let index=tabs.indexOf(kind);if(event.key==='ArrowRight')index=(index+1)%tabs.length;else if(event.key==='ArrowLeft')index=(index+tabs.length-1)%tabs.length;else if(event.key==='Home')index=0;else if(event.key==='End')index=tabs.length-1;else return;event.preventDefault();setAbilityTab(tabs[index]);setCategory('');setQuery('');event.currentTarget.parentElement.querySelectorAll('[role="tab"]')[index].focus();}} onClick={()=>{setAbilityTab(kind);setCategory('');setQuery('');}}>{labels[kind]} <small>{all.filter(e=>e.kind===kind).length}</small></button>)}
                   </div>
+                  {search([abilityTab])}
+                  <div className="ts-sheet-item-list" id="ts-ability-panel" role="tabpanel" aria-labelledby={`ts-ability-${abilityTab}`}>
+                    {all.filter(e=>e.kind===abilityTab && filter(e)).map(e=><ItemCard key={e.key} entry={e} editing={editing} edit={edit} remove={remove} host={host}/>)}
+                  </div>
+                  {!all.some(e=>e.kind===abilityTab && filter(e)) && <div className="ts-sheet-empty-category"><Ic name="folder-open"/><p>Nenhum conteúdo nesta categoria{query?' para a busca atual':''}.</p>{editing && <button className="ts-button" onClick={()=>{setNewKind(abilityTab);setModal('add');}}>Adicionar {labels[abilityTab].toLowerCase()}</button>}</div>}
+                </>
+              )}
+              {section === 'actions' && (
+                <>
+                  {title('Ações e efeitos',`Ações de ${unit?.name || data.name}. Contadores registram usos; a resolução das regras continua com o mestre.`)}
+                  <div className="ts-sheet-search">
+                    <input aria-label="Buscar ação" placeholder="Buscar ação, origem ou regra…" value={query} onChange={e=>setQuery(e.target.value)}/>
+                    <select aria-label="Tipo de ação" value={activation} onChange={e=>setActivation(e.target.value)}><option value="">Todos os tipos</option>{[...new Set(unitActions(actions,unitIndex,{includeInactive:true}).map(a=>a.action.activation).filter(Boolean))].map(type=><option key={type}>{type}</option>)}</select>
+                    <button className="ts-button" aria-pressed={includeInactive} onClick={()=>setIncludeInactive(!includeInactive)}>Mostrar inativas</button>
+                  </div>
+                  <p className="ts-sheet-muted">{scopedActions.length} ação(ões) • {includeInactive?'Inclui ranks e loadouts inativos':'Somente ranks adquiridos e loadouts ativos'}</p>
                   <div className="ts-sheet-section-title ts-sheet-actions-title">
-                    <h2>Ações de todos os equipamentos e talentos</h2>
+                    <h3>Regras e frequência</h3>
                   </div>
                   <div className="ts-sheet-actions-grid">
-                    {actions
-                      .filter((a) =>
-                        `${a.name} ${a.owner} ${plain(a.action.detail)}`
-                          .toLowerCase()
-                          .includes(query.toLowerCase()),
-                      )
+                    {scopedActions
                       .map((a) => (
-                        <article key={a.key} className="ts-sheet-card">
+                        <article key={a.key} className={`ts-sheet-card ${!a.active?"ts-sheet-inactive":""}`}>
                           <div className="ts-sheet-row-head">
                             <h3>{a.name}</h3>
                             <span className="ts-sheet-chip">
@@ -1513,7 +1521,7 @@ export function SheetEditor({ host = {} }) {
                     >
                       {data.loadouts?.map((l, i) => (
                         <option value={i} key={i}>
-                          {l.name || `Loadout ${i + 1}`}
+                          {l.name || `Loadout ${i + 1}`}{i===(data.active_index||0)?" • Ativo":""}
                         </option>
                       ))}
                     </select>
@@ -1557,78 +1565,28 @@ export function SheetEditor({ host = {} }) {
               )}
               {section === "mechs" && (
                 <>
-                  {title(
-                    "Mechas e montagens",
-                    "Frames, traits, core system, armas, mods e sistemas de cada loadout.",
-                  )}{" "}
-                  {!data.mechs.length ? (
+                  {title('Hangar', 'Escolha um mecha para consultar seu frame, montagens e sistemas. Cada loadout tem seus próprios equipamentos.')}
+                  <div className="ts-sheet-hangar">
+                    {data.mechs.map((mech,i)=><button className="ts-sheet-mech-choice" key={mech.id||i} aria-pressed={unitIndex===i} onClick={()=>chooseUnit(i)}><Ic name="robot"/><span><strong>{mech.name||`Mecha ${i+1}`}</strong><small>{mech.frameData?.name||mech.frame||'Frame não informado'}</small></span></button>)}
+                  </div>
+                  {!data.mechs.length && <article className="ts-sheet-card"><h3>Nenhum mecha nesta ficha</h3><p className="ts-sheet-muted">Importe um compartilhamento ou JSON que inclua os mechas do piloto.</p></article>}
+                  {unitIndex<0 && data.mechs.length>0 && <p className="ts-sheet-muted">Escolha um mecha acima para abrir sua ficha.</p>}
+                  {unitIndex>=0 && unit && <>
                     <article className="ts-sheet-card">
-                      <h3>Nenhum mecha nesta ficha</h3>
-                      <p className="ts-sheet-muted">
-                        O compartilhamento importado não incluiu mechas.
-                        Atualize o link ou importe um JSON que os contenha.
-                        Nenhum mecha é criado por suposição.
-                      </p>
+                      <div className="ts-sheet-row-head"><h3>{unit.frameData?.name||unit.frame||'Frame'}</h3><span className="ts-sheet-chip">Frame</span></div>
+                      <Field label="Nome do mecha" value={unit.name} disabled={!editing} onChange={v=>edit([...unitPath,'name'],v)}/>
+                      <Rules value={unit.frameData?.description}/>
+                      {unit.frameData?.traits?.map((trait,i)=><details key={i}><summary>{trait.name||`Trait ${i+1}`}</summary><Rules value={trait.description||trait.effect}/></details>)}
+                      {unit.frameData?.core_system && <details><summary>Core system • {unit.frameData.core_system.name}</summary><Rules value={unit.frameData.core_system.description}/><Rules value={unit.frameData.core_system.passive_effect}/><Rules value={unit.frameData.core_system.active_effect}/></details>}
+                      {editing && <details><summary>Editar definição do frame</summary><RawTree value={unit.frameData||{}} path={[...unitPath,'frameData']} edit={edit} editing/></details>}
                     </article>
-                  ) : (
-                    <>
-                      {unitSelect()}
-                      {data.mechs.map((m, i) => (
-                        <article className="ts-sheet-card" key={m.id || i}>
-                          <div className="ts-sheet-row-head">
-                            <h3>{m.name}</h3>
-                            <span className="ts-sheet-chip">
-                              {m.frameData?.name || m.frame}
-                            </span>
-                          </div>
-                          <Rules value={m.frameData?.description} />
-                          <Field
-                            label={`Nome do mecha ${i + 1}`}
-                            value={m.name}
-                            disabled={!editing}
-                            onChange={(v) => edit(["mechs", i, "name"], v)}
-                          />
-                          <RawTree
-                            value={m.frameData || {}}
-                            path={["mechs", i, "frameData"]}
-                            edit={edit}
-                            editing={editing}
-                          />
-                          <RawTree
-                            value={m.loadouts || []}
-                            path={["mechs", i, "loadouts"]}
-                            edit={edit}
-                            editing={editing}
-                          />
-                          <RichField
-                            label={`Notas de ${m.name}`}
-                            value={m.notes}
-                            editing={editing}
-                            onChange={(v) => edit(["mechs", i, "notes"], v)}
-                          />
-                        </article>
-                      ))}
-                      <div className="ts-sheet-item-list">
-                        {all
-                          .filter(
-                            (x) =>
-                              x.path[0] === "mechs" &&
-                              x.kind !== "frame" &&
-                              filter(x),
-                          )
-                          .map((e) => (
-                            <ItemCard
-                              key={e.key}
-                              entry={e}
-                              editing={editing}
-                              edit={edit}
-                              remove={remove}
-                              host={host}
-                            />
-                          ))}
-                      </div>
-                    </>
-                  )}
+                    <div className="ts-sheet-unit-select"><label>Loadout <select aria-label="Loadout do mecha" value={viewedLoadout} onChange={e=>setLoadoutIndex(Number(e.target.value))}>{unit.loadouts?.map((l,i)=><option key={i} value={i}>{l.name||`Loadout ${i+1}`}{i===(unit.active_loadout_index||0)?' • Ativo':''}</option>)}</select></label>{editing && unit.loadouts?.length>0 && <button className="ts-button" disabled={viewedLoadout===(unit.active_loadout_index||0)} onClick={()=>edit([...unitPath,'active_loadout_index'],viewedLoadout)}>Usar este loadout</button>}</div>
+                    {search(['mech_weapons','weapon_mods','systems'])}
+                    <div className="ts-sheet-item-list">{equipmentEntries.map(entry=><div key={entry.key}><p className="ts-sheet-mount-label">{mountTitle(entry,unit)}</p><ItemCard entry={entry} editing={editing} edit={edit} remove={remove} host={host}/></div>)}</div>
+                    {!equipmentEntries.length && <p className="ts-sheet-muted">Nenhum equipamento neste loadout para a busca atual.</p>}
+                    <RichField label={`Notas de ${unit.name}`} value={unit.notes} editing={editing} onChange={v=>edit([...unitPath,'notes'],v)}/>
+                    <details><summary>{editing?'Editar montagens e campos adicionais':'Dados adicionais do mecha'}</summary><RawTree value={unit.loadouts||[]} path={[...unitPath,'loadouts']} edit={edit} editing={editing}/></details>
+                  </>}
                 </>
               )}
               {section === "combat" && (
@@ -1637,7 +1595,6 @@ export function SheetEditor({ host = {} }) {
                     "Combate e recursos",
                     "Controle explícito de valores. Estrutura, stress, testes e efeitos especiais exigem resolução da regra pelo mestre.",
                   )}
-                  {unitSelect()}
                   <article className="ts-sheet-card">
                     <h3>{unit?.name} • Recursos</h3>
                     <div className="ts-sheet-resource-grid">

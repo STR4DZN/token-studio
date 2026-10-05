@@ -6,6 +6,7 @@ await mkdir(path.join(dest,'scripts'),{recursive:true});await mkdir(path.join(de
 await copyFile('foundry/module.json',path.join(dest,'module.json'));
 for(const file of ['foundry.js','transaction.js','sheet-adapter.js'])await copyFile(`foundry/${file}`,path.join(dest,'scripts',file));
 await copyFile('src/compcon.js',path.join(dest,'scripts/compcon.js'));
+await copyFile('src/asset-path.js',path.join(dest,'scripts/asset-path.js'));
 await copyFile('build/editor/editor.js',path.join(dest,'scripts/editor.js'));
 await copyFile('build/editor/editor.css',path.join(dest,'styles/editor.css'));
 await copyFile('foundry/host.css',path.join(dest,'styles/host.css'));

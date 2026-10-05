@@ -1,4 +1,13 @@
-# Validação — Token Studio 0.2.3
+# Validação — Token Studio 0.2.4
+
+## Correção das rotas de molduras na 0.2.4
+
+- As capturas do usuário mostram miniaturas quebradas e erro ao escolher uma moldura.
+- Os 356 originais e 356 miniaturas do ZIP oficial 0.2.3 foram decodificados com Pillow, sem erros. Os arquivos não estão corrompidos.
+- A concatenação pressupunha que `getRoute` preservasse a barra final da pasta. Uma rota normalizada sem barra gerava `assetsframes/...`, fora da pasta de assets. A documentação garante uma rota absoluta com prefixo, não um separador final de diretório.
+- O teste do adaptador falhou antes da correção com `/vtt/modules/token-studio/assets` e passou após a normalização.
+- A publicação passa a verificar por HTTP os 712 arquivos do catálogo e as duas imagens padrão, sem prefixo e com `/vtt`, comparando os bytes servidos.
+- A confirmação na instalação Foundry real do usuário continua pendente.
 
 ## Falha de carregamento corrigida na 0.2.3
 

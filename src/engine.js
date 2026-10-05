@@ -1,4 +1,5 @@
 // Coordinates are normalized to the output canvas, never to the source bitmap.
+import { assetPath } from './asset-path.js';
 export const SCHEMA = 1;
 export const clone = value => structuredClone(value);
 export function createView(src, token = true) {
@@ -74,7 +75,7 @@ export async function loadImage(src) {
 export function clearImageCache() { imageCache.clear(); }
 export function imageDimensions(image) { return { width: image.naturalWidth || image.width, height: image.naturalHeight || image.height }; }
 export function createCanvas(width, height) { const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height; return canvas; }
-export function framePath(view, assetsBase) { return view.frame === 'custom' ? view.frameSrc : view.frame === 'none' ? '' : `${assetsBase}frame-silver.png`; }
+export function framePath(view, assetsBase) { return view.frame === 'custom' ? view.frameSrc : view.frame === 'none' ? '' : assetPath(assetsBase, 'frame-silver.png'); }
 export async function loadResources(view, assetsBase) {
   const [image, frame] = await Promise.all([loadImage(view.src), loadImage(framePath(view, assetsBase))]);
   return { image, frame, dimensions: image ? imageDimensions(image) : null };

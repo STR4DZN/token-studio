@@ -1,4 +1,5 @@
 import { mountEditor } from './editor.js';
+import { assetPath } from './asset-path.js';
 import { applyTransaction } from './transaction.js';
 import {prepareSheetPlan,applySheetPlan,readNativePilot}from'./sheet-adapter.js';
 const ID = 'token-studio';
@@ -69,7 +70,7 @@ Hooks.once('init', () => {
         readActorSheet:()=>readNativePilot(actor,game),openItem:async uuid=>(await fromUuid(uuid))?.sheet?.render(true),
         prepareSheetApply:(sheet,parts)=>prepareSheetPlan({actor,sheet,parts,game,validateItem:async(data,parent)=>{const candidate=new CONFIG.Item.documentClass(data,{parent});candidate.validate({strict:true});}}),
         applySheet:async(plan,sheet)=>{const result=await applySheetPlan({plan,sheet,game,createActor:data=>CONFIG.Actor.documentClass.create(data),saveBackup:async snapshots=>{plan.backupPath=await upload(actor,new Blob([JSON.stringify({schema:'token-studio-foundry-backup-1',createdAt:Date.now(),world:game.world.id,documents:snapshots},null,2)],{type:'application/json'}),'backups');}});ui.notifications.info(`Token Studio: ficha aplicada. Backup: ${plan.backupPath}`);return result;},
-        assetsBase:route(`modules/${ID}/assets/`), name:actor.name, type:({pilot:'Piloto',mech:'Mech',npc:'NPC',deployable:'Deployable'})[actor.type] || actor.type,
+        assetsBase:assetPath(route(`modules/${ID}/assets`)), name:actor.name, type:({pilot:'Piloto',mech:'Mech',npc:'NPC',deployable:'Deployable'})[actor.type] || actor.type,
         key:`${game.world.id}:${actor.uuid}:${game.user.id}`, source, project, tokenSource:tokenSource && !tokenSource.includes('mystery-man') && tokenSource!==actor.img ? tokenSource:null, sceneCount:selectedTokens(actor).length,getSceneCount:()=>selectedTokens(actor).length,
         presets:game.settings.get(ID, 'presets'), savePresets:items => game.settings.set(ID, 'presets', items),
         importFile:(file,kind) => upload(actor,file,kind), onClose:() => this.close(),

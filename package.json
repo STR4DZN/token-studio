@@ -1,6 +1,6 @@
 {
   "name": "token-studio",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,7 +12,7 @@
     "test": "node --test tests/engine.test.mjs tests/foundry-bootstrap.test.mjs tests/compcon.test.mjs tests/sheet-adapter.test.mjs",
     "validate:release": "node scripts/validate-release.mjs",
     "release:assets": "npm run build:module && npm run validate:release && npm run test:module && python3 scripts/package-release.py",
-    "test:module": "node --experimental-vm-modules --test tests/packaged-module.test.mjs"
+    "test:module": "node --experimental-vm-modules --test tests/packaged-module.test.mjs tests/module-assets.test.mjs"
   },
   "dependencies": {
     "@fontsource/inter": "^5.3.0",

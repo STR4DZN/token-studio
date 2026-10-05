@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.4
+
+- Corrige a junção dos caminhos das imagens quando a rota de assets não termina em barra, preservando prefixos do servidor.
+- Usa a mesma função para miniaturas, originais e imagens padrão; os arquivos originais permanecem intactos.
+- Adiciona regressão na passagem dos caminhos Foundry → editor e verifica por HTTP todos os arquivos do catálogo empacotado, com e sem prefixo.
+
 ## 0.2.3 — 2026-10-05
 
 - Corrige o carregamento do módulo no navegador: o build em modo biblioteca agora substitui `process.env.NODE_ENV` por `production`. O React empacotado não exige mais a variável Node `process`.

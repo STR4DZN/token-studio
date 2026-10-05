@@ -1,17 +1,9 @@
-# Token Studio v0.2.3 — correção de carregamento
+# Token Studio v0.2.4 — caminhos das molduras
 
-O módulo 0.2.2 falhava ao carregar o editor com `ReferenceError: process is not defined`, antes de registrar o menu de atores e a API. O erro foi reproduzido no ZIP oficial, com checksum confirmado.
+Corrige os caminhos das miniaturas, molduras originais e imagens padrão quando a rota da pasta não termina em barra. O prefixo do servidor é preservado.
 
-## Correção
+Os 356 originais e as 356 miniaturas da release anterior foram decodificados sem erros; seus bytes foram preservados. A junção incorreta podia gerar `assetsframes/...`, causando falha no carregamento.
 
-- Build de biblioteca com React em produção, sem depender da variável Node `process` no navegador.
-- Mantém o evento `getActorContextOptions` correto para Foundry 13.
-- Publicação passa a carregar o editor compilado e todas as dependências reais num contexto sem globais Node; não substitui React por uma simulação.
+A publicação verifica todos os arquivos do catálogo por HTTP com e sem prefixo, além dos testes de carregamento do editor e registro do menu/API.
 
-## Atualizar
-
-Atualize Token Studio para 0.2.3 e recarregue o mundo. Como mestre: botão direito no ator → Token Studio.
-
-## Verificação
-
-42 testes existentes e 3 testes novos do pacote compilado. A execução visual em Foundry 13 + Lancer reais ainda precisa ser confirmada na instalação do usuário.
+Atualize para 0.2.4, recarregue o mundo com Ctrl+F5 e abra novamente o catálogo. A confirmação visual em Foundry 13 + Lancer reais continua pendente.

@@ -1,4 +1,4 @@
-# Token Studio — v0.2.3
+# Token Studio — v0.2.4
 
 Editor independente de retratos e tokens, catálogo de molduras e painel de ficha COMP/CON para o mestre. Interface baseada na proposta visual escolhida: tema escuro, destaque violeta, imagem grande e controles diretos.
 

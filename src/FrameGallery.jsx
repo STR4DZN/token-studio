@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import catalog from "./frame-catalog.json";
+import { assetPath } from './asset-path.js';
 export function FrameGallery({ assetsBase, onChoose, onClose, busy }) {
   const [query, setQuery] = useState(""),
     [author, setAuthor] = useState(""),
@@ -107,7 +108,7 @@ export function FrameGallery({ assetsBase, onChoose, onClose, busy }) {
                 onClick={() => onChoose(f)}
               >
                 <img
-                  src={assetsBase + f.thumb}
+                  src={assetPath(assetsBase, f.thumb)}
                   alt=""
                   loading="lazy"
                   width="100"

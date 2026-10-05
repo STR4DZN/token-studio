@@ -2,14 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile}from 'node:fs/promises';
 const manifest=JSON.parse(await readFile(new URL('../foundry/module.json',import.meta.url),'utf8'));
+const mounted=[];
 const hooks=new Map(),settings=[],module={version:manifest.version};
 globalThis.Hooks={once:(n,f)=>hooks.set(n,f),on:(n,f)=>hooks.set(n,f)};
 globalThis.window={innerWidth:1400,innerHeight:1000};
-globalThis.game={user:{isGM:true,id:'gm'},world:{id:'test-world'},modules:new Map([['token-studio',module]]),settings:{register:(id,key,options)=>settings.push({id,key,options})}};
+globalThis.game={user:{isGM:true,id:'gm'},world:{id:'test-world'},modules:new Map([['token-studio',module]]),settings:{get:()=>[],register:(id,key,options)=>settings.push({id,key,options})}};
 let rendered=0;
 class ApplicationV2{constructor(options){this.options=options;}async render(){rendered++;return this;}bringToFront(){this.front=true;}async maximize(){}async _onClose(){}}
-globalThis.foundry={applications:{api:{ApplicationV2}},utils:{getRoute:p=>p,randomID:()=> 'abc123'}};
-const code=(await readFile(new URL('../foundry/foundry.js',import.meta.url),'utf8')).replace("import { mountEditor } from './editor.js';",'const mountEditor=()=>()=>{};').replace("'./sheet-adapter.js'",JSON.stringify(new URL('../foundry/sheet-adapter.js',import.meta.url).href)).replace("'./transaction.js'",JSON.stringify(new URL('../foundry/transaction.js',import.meta.url).href));
+globalThis.foundry={applications:{api:{ApplicationV2}},utils:{getRoute:p=>'/vtt/'+p.replace(/^\/+|\/+$/g,''),randomID:()=> 'abc123'}};
+const code=(await readFile(new URL('../foundry/foundry.js',import.meta.url),'utf8')).replace("import { mountEditor } from './editor.js';",'const mountEditor=(element,host)=>{globalThis.__tokenStudioTestMounts.push(host);return()=>{};};').replace("'./asset-path.js'",JSON.stringify(new URL('../src/asset-path.js',import.meta.url).href)).replace("'./sheet-adapter.js'",JSON.stringify(new URL('../foundry/sheet-adapter.js',import.meta.url).href)).replace("'./transaction.js'",JSON.stringify(new URL('../foundry/transaction.js',import.meta.url).href));
+globalThis.__tokenStudioTestMounts=mounted;
 await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
 hooks.get('init')();
 const actor={id:'a1',uuid:'Actor.a1',documentName:'Actor',canUserModify:()=>true};
@@ -43,4 +45,17 @@ test('controles das fichas V1 e V2 abrem o editor, sem duplicatas',async()=>{
   hooks.get('getHeaderControlsApplicationV2')({document:clicked},controls);
   assert.equal(controls.length,1);assert.equal((await buttons[0].onclick()).actor,clicked);
   assert.equal((await controls[0].onClick()).actor,clicked);
+});
+
+test('rotas de imagens preservam o prefixo e a barra antes dos arquivos do catálogo',async()=>{
+  globalThis.canvas={tokens:{controlled:[]}};
+  const clicked={...actor,id:'asset-actor',uuid:'Actor.asset-actor',getFlag:()=>null,prototypeToken:{texture:{src:''}}};
+  const app=await module.api.open(clicked);
+  app._replaceHTML({}, {replaceChildren(){}});
+  const host=mounted.at(-1);
+  assert.equal(host.assetsBase,'/vtt/modules/token-studio/assets/');
+  const catalog=JSON.parse(await readFile(new URL('../src/frame-catalog.json',import.meta.url),'utf8'));
+  for(const entry of catalog)for(const key of ['file','thumb']){
+    assert.equal(host.assetsBase+entry[key],'/vtt/modules/token-studio/assets/'+entry[key]);
+  }
 });

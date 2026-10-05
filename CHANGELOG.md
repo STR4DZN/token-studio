@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.3 — 2026-10-05
+
+- Corrige o carregamento do módulo no navegador: o build em modo biblioteca agora substitui `process.env.NODE_ENV` por `production`. O React empacotado não exige mais a variável Node `process`.
+- Reproduz o erro `ReferenceError: process is not defined` no ZIP oficial 0.2.2, que interrompia a importação antes do registro do menu, cabeçalhos e API.
+- Adiciona testes do grafo real de módulos empacotados, incluindo React, sem globais Node e sem substituir o editor por uma simulação. Esses testes fazem parte da publicação e impedem a liberação de um pacote que falhe ao carregar.
+- Mantém a integração de contexto `getActorContextOptions` da versão 13. Validação no Foundry real ainda depende da instalação do usuário.
+
 ## 0.2.2 — 2026-10-05
 
 - Corrige a entrada Token Studio no menu de contexto dos atores: utiliza `getActorContextOptions`, evento público do Foundry 13, em vez do evento removido da versão 12.

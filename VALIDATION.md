@@ -1,4 +1,11 @@
-# Validação — Token Studio 0.2.2
+# Validação — Token Studio 0.2.3
+
+## Falha de carregamento corrigida na 0.2.3
+
+- O ZIP oficial 0.2.2 foi baixado da release e seu SHA-256 confirmado: `7dbe35b8262d9a3ed1f9cb779bd667e8688bbeecab1447890da8c3251819c6f8`. Continha 12 referências a `process.env.NODE_ENV` no editor compilado.
+- Três testes novos carregando os arquivos reais da release, em um contexto JavaScript sem `process`, falharam com `ReferenceError: process is not defined`, incluindo o ponto de entrada do manifesto. Isso impedia o registro dos hooks e da API; mudar somente o evento do menu não resolvia o carregamento.
+- O build em modo biblioteca foi corrigido com a substituição explícita de `process.env.NODE_ENV`. A publicação passa a exigir testes do editor compilado e do grafo real de dependências, além dos 42 testes de domínio e bootstrap existentes.
+- Os testes anteriores de bootstrap substituíam o editor por uma função simulada e por isso não detectavam esse erro no bundle. A confirmação visual e funcional em Foundry 13 + Lancer reais continua pendente.
 
 ## Correção 0.2.2
 

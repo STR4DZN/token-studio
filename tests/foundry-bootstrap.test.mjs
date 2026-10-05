@@ -13,7 +13,8 @@ class ApplicationV2{constructor(options){this.options=options;}async render(){re
 globalThis.foundry={applications:{api:{ApplicationV2}},utils:{getRoute:p=>'/vtt/'+p.replace(/^\/+|\/+$/g,''),randomID:()=> 'abc123'}};
 const code=(await readFile(new URL('../foundry/foundry.js',import.meta.url),'utf8')).replace("import { mountEditor } from './editor.js';",'const mountEditor=(element,host)=>{globalThis.__tokenStudioTestMounts.push(host);return()=>{};};').replace("'./image-url.js'",JSON.stringify(new URL('../src/image-url.js',import.meta.url).href)).replace("'./image-storage.js'",JSON.stringify(new URL('../src/image-storage.js',import.meta.url).href)).replace("'./actor-images.js'",JSON.stringify(new URL('../src/actor-images.js',import.meta.url).href)).replace("'./compcon.js'",JSON.stringify(new URL('../src/compcon.js',import.meta.url).href)).replace("'./asset-path.js'",JSON.stringify(new URL('../src/asset-path.js',import.meta.url).href)).replace("'./sheet-adapter.js'",JSON.stringify(new URL('../foundry/sheet-adapter.js',import.meta.url).href)).replace("'./transaction.js'",JSON.stringify(new URL('../foundry/transaction.js',import.meta.url).href));
 globalThis.__tokenStudioTestMounts=mounted;
-await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
+await import('data:text/javascript;base64,'+Buffer.from(code.replace("'./native-validation.js'",JSON.stringify(new URL('../foundry/native-validation.js',import.meta.url).href))).toString('base64'));
+globalThis.CONFIG={Actor:{documentClass:class {validate(){return true;}}}};
 hooks.get('init')();
 const actor={id:'a1',uuid:'Actor.a1',documentName:'Actor',canUserModify:()=>true};
 test('inicialização expõe API da versão instalada e configura armazenamento do mundo',()=>{assert.equal(module.api.version,manifest.version);assert.equal(settings.find(s=>s.key==='outputFolder').options.default,'token-studio');assert.equal(settings.find(s=>s.key==='presets').options.scope,'world');});
@@ -63,7 +64,7 @@ test('rotas de imagens preservam o prefixo e a barra antes dos arquivos do catá
 
 test('adaptador mantém URL do retrato sem upload e devolve estado atualizado ao editor aberto',async()=>{
  const saved={fetch:globalThis.fetch,Image:globalThis.Image,ui:globalThis.ui,settings:game.settings.get,system:game.system,actors:game.actors,apps:foundry.applications.apps};
- const uploads=[],clicked={...actor,id:'linked-pilot',uuid:'Actor.linked-pilot',name:'Antigo',type:'pilot',img:'old.png',system:{},flags:{},prototypeToken:{texture:{src:'custom-token.png',scaleX:1.6}},items:{contents:[]},getFlag(ns,key){return this.flags[ns]?.[key];},toObject(){return structuredClone({_id:this.id,name:this.name,type:this.type,img:this.img,system:this.system,flags:this.flags,prototypeToken:this.prototypeToken,items:[]});},async update(patch){for(const[k,v]of Object.entries(patch))if(k.includes('.'))setPath(this,k.split('.'),v);else this[k]=structuredClone(v);}};
+ const uploads=[],clicked={...actor,id:'linked-pilot',uuid:'Actor.linked-pilot',name:'Antigo',type:'pilot',img:'old.png',system:{},flags:{},prototypeToken:{texture:{src:'custom-token.png',scaleX:1.6}},items:{contents:[]},validate(){return true;},sheet:{getData:async()=>({})},getFlag(ns,key){return this.flags[ns]?.[key];},toObject(){return structuredClone({_id:this.id,name:this.name,type:this.type,img:this.img,system:this.system,flags:this.flags,prototypeToken:this.prototypeToken,items:[]});},async update(patch){for(const[k,v]of Object.entries(patch))if(k.includes('.'))setPath(this,k.split('.'),v);else this[k]=structuredClone(v);}};
  try{
   game.settings.get=(_,key)=>key==='outputFolder'?'token-studio':[];game.system={id:'lancer'};game.actors={contents:[clicked]};globalThis.ui={notifications:{info(){}}};
   foundry.applications.apps={FilePicker:{implementation:{browse:async()=>({}),upload:async(_,folder,file)=>{uploads.push({folder,file});return{path:folder+'/'+file.name};}}}};
@@ -92,4 +93,17 @@ test('imagens idênticas são reutilizadas por conteúdo entre atores e aplicaç
   }
   assert.equal(uploads.length,1);
  }finally{foundry.applications.apps=saved.apps;game.settings.get=saved.settings;globalThis.ui=saved.ui;globalThis.canvas=saved.canvas;}
+});
+
+test('validação nativa recusa retorno falso e prepara dados/template pela API do Foundry',async()=>{
+ const {validateNativeActor,validateNativeDocument,verifyNativeSheet}=await import('../foundry/native-validation.js');
+ const previous=CONFIG.Actor.documentClass,handlebars=foundry.applications.handlebars;let candidate,renderedTemplate;
+ try {
+  CONFIG.Actor.documentClass=class {constructor(data,options){candidate={data,options};}validate(){return false;}};
+  assert.throws(()=>validateNativeActor({name:'Piloto',items:[]}),/validação/);assert.equal(candidate.options.strict,true);assert.equal(candidate.data.name,'Piloto');
+  assert.throws(()=>validateNativeDocument({validate:()=>false}),/validação/);
+  foundry.applications.handlebars={renderTemplate:async(template,context)=>{renderedTemplate={template,context};throw Error('referência inválida no template');}};
+  await assert.rejects(()=>verifyNativeSheet({validate:()=>true,sheet:{template:'pilot.hbs',getData:async()=>({pilot:'P'})}}),/referência inválida/);assert.deepEqual(renderedTemplate,{template:'pilot.hbs',context:{pilot:'P'}});
+  await assert.rejects(()=>verifyNativeSheet({validate:()=>true,sheet:{getData:async()=>{throw Error('loadout inválido');}}}),/loadout inválido/);
+ } finally {CONFIG.Actor.documentClass=previous;foundry.applications.handlebars=handlebars;}
 });

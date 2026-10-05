@@ -1,4 +1,4 @@
-# Token Studio — v0.2.7
+# Token Studio — v0.2.8
 
 Editor independente de retratos e tokens, catálogo de molduras e painel de ficha COMP/CON para o mestre. Interface baseada na proposta visual escolhida: tema escuro, destaque violeta, imagem grande e controles diretos.
 
@@ -24,7 +24,7 @@ O Tokenizer não é necessário. Esta versão não depende de outros módulos. F
 
 ## Vincular ficha COMP/CON ao ator
 
-Abra Token Studio no ator piloto → **Ficha do mestre** → importe o link/código ou JSON → **Vincular / atualizar ator…** → revise e aplique. Identidade, retrato, build, recursos e mechas começam selecionados. O código e a data de sincronização passam à ficha nativa do Lancer. O retrato é validado e usado por URL, sem cópia local, e aparece na ficha; um token personalizado mantém sua arte e seus ajustes. O token padrão fica vinculado ao ator. Para buscar uma versão nova, use **Atualizar origem**, revise e aplique novamente. Não há sincronização em segundo plano nem escrita na conta COMP/CON.
+Abra Token Studio no ator piloto → **Ficha do mestre** → importe o link/código ou JSON → **Vincular / atualizar ator…** → revise e aplique. Identidade, retrato, build, recursos e mechas começam selecionados. O código e a data de sincronização passam à ficha nativa do Lancer, e o mecha favorito fica ativo no piloto. O retrato é validado e usado por URL, sem cópia local, e aparece na ficha; um token personalizado mantém sua arte e seus ajustes. O token padrão fica vinculado ao ator. Para buscar uma versão nova, use **Atualizar origem**, revise e aplique novamente. Não há sincronização em segundo plano nem escrita na conta COMP/CON.
 
 ## Usar
 
@@ -52,7 +52,7 @@ Mude para **Ficha do mestre**, cole o link público COMP/CON v3 e carregue. Ativ
 
 Na edição da ficha, **Retrato por URL** atualiza a unidade selecionada. Ao aplicar ao ator, o módulo valida de novo e grava a URL, sem upload. Arquivos locais e resultados exportados usam um nome SHA-256 compartilhado entre atores: conteúdo idêntico reutiliza o arquivo existente. Arquivos antigos permanecem no mundo.
 
-No Foundry, **Revisar alterações** separa identidade/build/combate/mechas, mostra alterações antes de aplicar e salva um backup. A edição remota da conta COMP/CON não está implementada: você edita sua cópia e/ou documentos Foundry autorizados. Efeitos de ações, regras especiais, rolagens e derivados da cópia não são automatizados integralmente. Leia [COMP_CON_GUIDE.md](COMP_CON_GUIDE.md) para entender os destinos, conflitos e limites.
+No Foundry, **Revisar alterações** separa identidade/build/combate/mechas, mostra alterações antes de aplicar e salva um backup. A revisão valida o ator e as referências de equipamento usando o Lancer instalado; após aplicar, o módulo prepara a ficha nativa e restaura os documentos se essa preparação falhar. A edição remota da conta COMP/CON não está implementada: você edita sua cópia e/ou documentos Foundry autorizados. Efeitos de ações, regras especiais, rolagens e derivados da cópia não são automatizados integralmente. Leia [COMP_CON_GUIDE.md](COMP_CON_GUIDE.md) para entender os destinos, conflitos e limites.
 
 ## O que já está implementado
 

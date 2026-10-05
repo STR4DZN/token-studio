@@ -1,4 +1,15 @@
-# Validação — Token Studio 0.2.7
+# Validação — Token Studio 0.2.8
+
+## Correções na 0.2.8
+
+- Ficha pública da Agnes/Fragmentada carregada no navegador com cinco mechas. As sete falsas pendências (três gatilhos personalizados e quatro licenças V3 com stub) foram eliminadas sem alterar o JSON de origem.
+- Fixture local reproduz uma janela de módulo de 1280 × 740, incluindo estilos globais de botões e host. As onze opções mantiveram 40,8 px; o menu com 404 px disponíveis rolou seu conteúdo de 720 px. Retrato da Agnes carregado por URL. Isto é uma verificação do layout, não uma instância do Foundry.
+- 81 testes de domínio/bootstrap, cinco testes do pacote compilado e quatro da prévia passam (90 no total).
+- Regressões cobrem gatilhos/stubs, sinergias/checklists, validação prévia do ator e loadout, recusa sem escrita, rollback após falha da ficha nativa e vínculo do mecha favorito com restauração do piloto e remoção dos mechas recém-criados quando a aplicação falha.
+- O editor abriu o retrato real da Agnes (736 × 521) em modo de visualização após falha CORS, sem flags prévios de permissão e sem criar cópia de imagem. As licenças Goblin/Gorgon/Metalmark/Hydra e seus ranks foram conferidos no perfil tático.
+- O módulo agora utiliza as classes nativas do sistema instalado na validação em memória e prepara o template nativo após a importação. Os testes automatizados simulam essas classes; não executam o Foundry/Lancer real.
+- Não há acesso ao mundo afetado, versão instalada do Lancer ou traceback da falha de abertura. A causa exata dessa falha e a recuperação do ator já afetado não foram confirmadas.
+
 
 ## Organização e URLs na 0.2.7
 

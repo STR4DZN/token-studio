@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createProject} from '../src/engine.js';
-import {createSheet,copy,setPath}from'../src/compcon.js';
-import {prepareSheetPlan,applySheetPlan,readNativePilot,toNativeItem}from'../foundry/sheet-adapter.js';
+import {createSheet,copy,setPath,entries}from'../src/compcon.js';
+import {prepareSheetPlan,applySheetPlan,readNativePilot,toNativeItem,plannedActorData}from'../foundry/sheet-adapter.js';
+import {sheetDiagnostics}from'../src/sheet-rules.js';
 const raw=()=>({itemType:'pilot',id:'p',name:'Novo',callsign:'N',level:3,mechSkills:[2,1,0,0],skills:[{id:'s',rank:2,data:{id:'s',name:'Skill',description:'<p>Texto</p>'}}],talents:[],mechs:[],loadouts:[{name:'A',armor:[],weapons:[{id:'w',instanceId:'weapon-1',data:{id:'w',name:'Arma',damage:[{type:'Kinetic',val:3}],range:[{type:'Range',val:5}]}}],gear:[]}],active_index:0,stats:{current:{hp:9},max:{hp:30}},notes:'Notas'});
 class FakeActor{
  constructor({name='Anterior',type='pilot',system={},items=[],flags={},id='p'}={}){this.id=id;this.uuid=`Actor.${id}`;this.type=type;this.name=name;this.system=copy(system);this.flags=copy(flags);this.img='arte.png';this.prototypeToken={texture:{src:'token.png'}};this.items={contents:items.map(x=>this.wrap(x))};this.writes=0;}
@@ -102,4 +103,34 @@ test('falha no mecha restaura também retrato, vínculo e token do piloto',async
  const data=raw();data.img={cloud_portrait:'https://img.test/p.png'};data.mechs=[{id:'m1',name:'Mecha',loadouts:[]}];
  const actor=new FakeActor(),mech=new FakeActor({id:'m',type:'mech',system:{lid:'m1',pilot:actor.uuid}}),game=gameFor([actor,mech]),before=[actor.toObject(),mech.toObject()],sheet=createSheet(data,{code:'123456789012'});
  const plan=await prepareSheetPlan({actor,sheet,parts:{...parts,portrait:true,mechs:true},game});mech.failOnce=true;await assert.rejects(()=>applySheetPlan({plan,sheet,game,resolvePortrait:async()=> 'local/p.png'}),/restaurados/);assert.deepEqual([actor.toObject(),mech.toObject()],before);
+});
+
+test('COMP/CON V3 mantém gatilhos personalizados e lê licenças a partir do stub',()=>{
+ const data=raw();data.skills=[{id:'Chirurgeon',rank:1,custom:true,custom_desc:'Create, modify and maintain cybernetics.'}];data.licenses=[{id:'mf_goblin',rank:3,stub:{id:'mf_goblin',name:'Goblin',source:'HORUS'}}];
+ const before=copy(data),all=entries(data),skill=toNativeItem(all.find(e=>e.kind==='skills')),license=toNativeItem(all.find(e=>e.kind==='licenses'));
+ assert.equal(skill.name,'Chirurgeon');assert.equal(skill.system.description,data.skills[0].custom_desc);assert.equal(license.name,'Goblin');assert.equal(license.system.manufacturer,'HORUS');assert.equal(license.system.curr_rank,3);
+ assert.deepEqual(data,before);assert.equal(sheetDiagnostics(data).length,0);assert.deepEqual(all.find(e=>e.kind==='licenses').dataPath,['licenses',0,'stub']);
+});
+test('sinergias de talentos e core system convertem listas em checklists nativos',()=>{
+ const s={detail:'Rule',locations:'Mech, Weapon',weapon_types:['Rifle'],weapon_sizes:'any',system_types:['Tech']};
+ const talent=toNativeItem({kind:'talents',item:{id:'t',rank:1},data:{id:'t',name:'T',ranks:[{synergies:[s]}]}}),native=talent.system.ranks[0].synergies[0];
+ assert.deepEqual(native.locations,['mech','weapon']);assert.equal(native.weapon_types.Rifle,true);assert.equal(native.weapon_types.Melee,false);assert.ok(Object.values(native.weapon_sizes).every(Boolean));assert.equal(native.system_types.Tech,true);assert.equal(native.system_types.AI,false);
+ const frame=toNativeItem({kind:'frame',item:{id:'f'},data:{id:'f',name:'F',core_system:{active_synergies:[s],passive_synergies:[s]}}});assert.deepEqual(frame.system.core_system.active_synergies,[native]);assert.deepEqual(frame.system.core_system.passive_synergies,[native]);
+ const bonusItem=toNativeItem({kind:'core_bonuses',item:{id:'cb'},data:{id:'cb',name:'CB',bonuses:[{id:'damage',val:1,weapon_types:[]}]}});assert.ok(Object.values(bonusItem.system.bonuses[0].weapon_types).every(v=>v===false));
+});
+test('validação do ator completo recebe itens e loadout resolvidos sem escrever no mundo',async()=>{
+ const actor=new FakeActor(),sheet=createSheet(raw()),before=actor.toObject();let candidate;
+ const plan=await prepareSheetPlan({actor,sheet,parts,game:gameFor([actor]),validateActor:async source=>{candidate=source;}});
+ assert.deepEqual(actor.toObject(),before);assert.equal(actor.writes,0);assert.equal(candidate.name,'Novo');assert.equal(candidate.system.hull,2);assert.equal(candidate.items.find(i=>i._id===candidate.system.loadout.weapons[0]).type,'pilot_weapon');assert.equal(plan.blocked,false);
+ const blocked=await prepareSheetPlan({actor,sheet,parts,game:gameFor([actor]),validateActor:async()=>{throw Error('system.loadout inválido');}});assert.equal(blocked.blocked,true);assert.ok(blocked.warnings.some(w=>w.includes('system.loadout inválido')));await assert.rejects(()=>applySheetPlan({plan:blocked,sheet,game:gameFor([actor])}),/impedimentos/);assert.equal(actor.writes,0);
+});
+test('falha ao preparar a ficha nativa restaura ator e itens após a importação',async()=>{
+ const actor=new FakeActor(),sheet=createSheet(raw()),before=actor.toObject(),plan=await prepare(actor,sheet);
+ await assert.rejects(()=>applySheetPlan({plan,sheet,game:gameFor([actor]),verifyActor:async()=>{throw Error('template do Lancer');}}),/restaurados.*ficha nativa.*template do Lancer/);assert.deepEqual(actor.toObject(),before);
+});
+test('mecha favorito fica ativo no piloto e falha final restaura esse vínculo',async()=>{
+ const data=raw();data.mechs=[{id:'m1',name:'A',loadouts:[]},{id:'m2',name:'B',loadouts:[]}];data.favorite_mech='m2';const actor=new FakeActor(),game=gameFor([actor]),sheet=createSheet(data),plan=await prepareSheetPlan({actor,sheet,parts:{...parts,mechs:true},game});let next=0;
+ await applySheetPlan({plan,sheet,game,createActor:async config=>new FakeActor({...config,id:'mech'+(++next)})});assert.equal(actor.system.active_mech,'Actor.mech2');
+ const second=new FakeActor(),before=second.toObject(),secondGame=gameFor([second]),secondPlan=await prepareSheetPlan({actor:second,sheet,parts:{...parts,mechs:true},game:secondGame}),created=[];
+ await assert.rejects(()=>applySheetPlan({plan:secondPlan,sheet,game:secondGame,createActor:async config=>{const a=new FakeActor({...config,id:'new'+created.length});created.push(a);return a;},verifyActor:async a=>{if(a===created[1])throw Error('ficha do mecha');}}),/restaurados/);assert.deepEqual(second.toObject(),before);assert.ok(created.every(a=>a.deleted));
 });

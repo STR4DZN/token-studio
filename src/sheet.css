@@ -234,8 +234,11 @@
   flex-direction: column;
   gap: 5px;
   overflow: auto;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: #50495e transparent;
 }
-.ts-sheet-sidebar button {
+.ts-app .ts-sheet-sidebar button {
   padding: 12px 11px !important;
   display: flex;
   align-items: center;
@@ -243,7 +246,12 @@
   text-align: left;
   border-radius: 8px !important;
   font-size: 12px;
+  flex: 0 0 auto;
+  min-height: 40px;
+  line-height: 1.4;
 }
+.ts-sheet-sidebar > .ts-sheet-nav-group,
+.ts-sheet-sidebar > .ts-sheet-source-info { flex: 0 0 auto; }
 .ts-sheet-sidebar button[aria-pressed="true"] {
   background: #383049;
   color: #dfd3ff;

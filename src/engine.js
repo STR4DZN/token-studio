@@ -66,7 +66,7 @@ export async function loadImage(src) {
     const image = new Image();
     image.crossOrigin = 'anonymous';
     image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error('Não foi possível carregar a imagem. Confira o arquivo ou o acesso ao endereço.'));
+    image.onerror = () => reject(Object.assign(new Error('Não foi possível carregar a imagem. Confira o arquivo ou o acesso ao endereço.'), {code:'IMAGE_LOAD', source:src}));
     image.src = src;
   });
   imageCache.set(src, promise);

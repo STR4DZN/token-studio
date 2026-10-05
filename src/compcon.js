@@ -320,11 +320,13 @@ export function entries(raw) {
   const add = (list, path, kind) => {
     for (const [i, item] of (list || []).entries())
       if (item) {
-        const data = item.data || item;
+        // V3 licenses carry a stub, while custom triggers carry their own text.
+        const data = item.data || (kind === 'licenses' && item.stub) ||
+          (kind === 'skills' && item.custom ? {...item, name:item.name || item.id, description:item.description ?? item.custom_desc ?? item.custom_detail ?? ''} : item);
         result.push({
           key: JSON.stringify([...path, i]),
           path: [...path, i],
-          dataPath: item.data ? [...path, i, "data"] : [...path, i],
+          dataPath: item.data ? [...path, i, "data"] : kind === 'licenses' && item.stub ? [...path, i, 'stub'] : [...path, i],
           item,
           data,
           kind,

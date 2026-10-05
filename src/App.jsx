@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { createProject, createView, validateProject, clone, outputSize, constrain, loadResources, renderOutput, renderStage, exportView, presetFromView, applyPreset, downloadBlob as automaticDownload, enclosedMask,maskAperture } from './engine.js';
+import { createProject, createView, validateProject, clone, outputSize, constrain, renderOutput, renderStage, exportView, presetFromView, applyPreset, downloadBlob as automaticDownload, enclosedMask,maskAperture } from './engine.js';
 import { readDraft, writeDraft, readPresets, writePresets } from './storage.js';
 import {assetPath} from './asset-path.js';
 import {syncPortraitProject} from './actor-images.js';
@@ -7,6 +7,7 @@ import {wheelZoom,readFavorites,frameChoices} from './editor-controls.js';
 import catalog from './frame-catalog.json';
 import {ImageURLForm} from './ImageURLForm.jsx';
 import {FrameGallery}from'./FrameGallery.jsx';
+import {loadEditorResources} from './editor-images.js';
 export const Icon = ({ name }) => <i className={`fa-solid fa-${name}`} aria-hidden="true" />;
 const defaults = { assetsBase: '/assets/', name: 'Ária', type: 'Piloto', key: 'standalone', isFoundry: false };
 async function dataUrl(file) { return new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result); r.onerror = () => reject(new Error('Falha ao ler o arquivo.')); r.readAsDataURL(file); }); }
@@ -68,7 +69,7 @@ export function App({ host: suppliedHost }) {
   useEffect(() => { let live = true; readDraft(host.key).then(draft => { if (live && draft && (!host.project || draft.updatedAt > (host.project.updatedAt || 0))) { validateProject(draft); setProject(draft); setNotice('Seu rascunho foi recuperado.'); } }).catch(() => { if (live) setNotice('Rascunho local indisponível. Exporte o projeto para guardar os ajustes.'); }).finally(() => { if (live) setReady(true); }); return () => { live = false; }; }, [host.key]);
   useEffect(() => { if (!ready) return; let live = true; setStatus('Salvando rascunho…'); const timer = setTimeout(() => { writeDraft(host.key, project).then(() => { if (live) setStatus('Rascunho salvo'); }).catch(() => { if (live) setStatus('Exporte para guardar o projeto'); }); }, 450); return () => { live = false; clearTimeout(timer); }; }, [project, ready, host.key]);
   useEffect(()=>()=>{if(ready)writeDraft(host.key,latest.current).catch(()=>{});},[ready,host.key]);
-  useEffect(() => { if(host.visible===false)return;let live = true; for (const key of ['token', 'portrait']) {if(project.views[key].displayOnly){setResources(current=>({...current,[key]:null}));continue;}loadResources(project.views[key], host.assetsBase).then(r => { if (live) setResources(current => ({ ...current, [key]: r })); }).catch(e => { if (live) { setResources(current => ({ ...current, [key]: null })); setError(e.message); } });} return () => { live = false; }; }, [project.views.token.src, project.views.token.frame, project.views.token.frameSrc, project.views.portrait.src, project.views.portrait.frame, project.views.portrait.frameSrc,project.views.portrait.displayOnly,project.views.token.displayOnly, host.assetsBase,host.visible]);
+  useEffect(() => { if(host.visible===false)return;let live = true; for (const key of ['token', 'portrait']) {if(project.views[key].displayOnly){setResources(current=>({...current,[key]:null}));continue;}loadEditorResources(project.views[key], host.assetsBase).then(r => { if (!live) return; if(r.displayOnly){const next=clone(latest.current);if(next.views[key].src!==project.views[key].src)return;next.views[key].displayOnly=true;replace(next,false);setNotice('A imagem deste ator carregou para visualização. A hospedagem bloqueia edição/exportação; escolha outra URL para editar.');}setResources(current => ({ ...current, [key]: r })); }).catch(e => { if (live) { setResources(current => ({ ...current, [key]: null })); setError(e.message); } });} return () => { live = false; }; }, [project.views.token.src, project.views.token.frame, project.views.token.frameSrc, project.views.portrait.src, project.views.portrait.frame, project.views.portrait.frameSrc,project.views.portrait.displayOnly,project.views.token.displayOnly, host.assetsBase,host.visible]);
   function updateHistory(h) { hist.current=h; setHistory(h); }
   function record(old) { updateHistory({past:[...hist.current.past.slice(-39),clone(old)],future:[]}); }
   function replace(next, undo = true) { if (undo) record(latest.current); next.updatedAt = Date.now(); latest.current = next; setProject(next); }

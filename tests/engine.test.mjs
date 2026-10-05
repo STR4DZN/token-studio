@@ -28,3 +28,12 @@ test('novo retrato preserva o token personalizado e só substitui arte padrão',
  project.views.token.src='/vtt/modules/token-studio/assets/pilot.png';const seeded=syncPortraitProject(project,'compcon.webp');assert.equal(seeded.views.token.src,'compcon.webp');assert.equal(seeded.views.token.zoom,2.7);assert.equal(seeded.views.token.frame,'gold');
  assert.ok(isDefaultImage('/vtt/systems/lancer/assets/icons/white/pilot.svg'));assert.ok(!isDefaultImage('my-pilot.svg'));assert.ok(!isDefaultImage('systems/lancer/assets/my-custom.png'));
 });
+
+test('ator antigo com URL sem CORS abre em visualização; falha de moldura não é confundida com retrato',async()=>{
+ const {loadEditorResources}=await import('../src/editor-images.js');const view=createProject('https://img.test/pilot.png').views.portrait;let probed;
+ const imageError=Object.assign(Error('CORS'),{code:'IMAGE_LOAD',source:view.src});
+ const result=await loadEditorResources(view,'/assets/',{load:async()=>{throw imageError;},probe:async(source,options)=>{probed={source,options};}});assert.equal(result.displayOnly,true);assert.equal(result.image,null);assert.deepEqual(probed,{source:view.src,options:{editable:false}});assert.equal(view.displayOnly,undefined);
+ await assert.rejects(()=>loadEditorResources(view,'/assets/',{load:async()=>{throw Object.assign(Error('moldura'),{code:'IMAGE_LOAD',source:'/assets/frame.png'});},probe:async()=>{throw Error('não deveria chamar');}}),/moldura/);
+ await assert.rejects(()=>loadEditorResources(view,'/assets/',{load:async()=>{throw imageError;},probe:async()=>{throw Error('URL indisponível');}}),/URL indisponível/);
+ const editable={image:{},frame:null};assert.equal(await loadEditorResources(view,'/assets/',{load:async()=>editable}),editable);
+});

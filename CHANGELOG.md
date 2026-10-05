@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.8 — 2026-10-05
+
+- O menu de escolhas mantém opções com altura mínima de 40 px e rolagem independente em janelas curtas, sem comprimir o texto.
+- Retratos remotos de atores antigos, sem flags de acesso, aparecem em modo de visualização quando a hospedagem bloqueia CORS, em vez de deixar o editor vazio. Falhas de moldura continuam sendo tratadas como falhas de moldura.
+- Gatilhos personalizados conservam descrição; licenças V3 usam nome/fabricante do `stub`, eliminando falsos avisos de definição ausente.
+- Sinergias de itens, talentos e core system são convertidas para os checklists nativos do Lancer. Listas vazias não passam a afetar todos os tipos de arma.
+- A revisão valida o ator completo em memória, com itens e referências do loadout, usando o sistema instalado. Após aplicar, prepara os dados e o template da ficha nativa; falhas acionam restauração e informam o ator/causa.
+- O mecha favorito do COMP/CON passa a ser o mecha ativo do piloto. Erros de retrato identificam a unidade afetada e interrompem a aplicação antes de alterar documentos.
+- A abertura da ficha no Foundry real ainda precisa ser conferida no mundo afetado; esta versão não declara compatibilidade verificada.
+
+
 ## 0.2.7 — 2026-10-05
 
 - Regras por arma/sistema/talento/frame e demais origens, com contagens, ações/passivas/efeitos/descrições separados, filtros combinados e montagem do conteúdo ao abrir.

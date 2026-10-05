@@ -79,8 +79,20 @@ function checklist(values, names) {
   if (values == null) return null;
   if (!Array.isArray(values)) return copy(values);
   return Object.fromEntries(
-    names.map((n) => [n, !values.length || values.includes(n)]),
+      names.map((n) => [n, values.some(v => text(v).toLowerCase() === 'any' || text(v).toLowerCase() === n.toLowerCase())]),
   );
+}
+function synergy(s) {
+  const values = v => v == null || typeof v === 'object' && !Array.isArray(v) ? v : Array.isArray(v) ? v : [v];
+  return {
+    detail: text(s.detail),
+    locations: (Array.isArray(s.locations) ? s.locations : s.locations ? [s.locations] : []).flatMap(l => text(l).toLowerCase().split(',').map(x => x.trim()).filter(Boolean)),
+    damage_types: checklist(values(s.damage_types), ['Burn','Energy','Explosive','Heat','Kinetic','Variable']),
+    range_types: checklist(values(s.range_types), ['Blast','Burst','Cone','Line','Range','Threat']),
+    weapon_types: checklist(values(s.weapon_types), ['Rifle','Launcher','Cannon','CQB','Melee','Nexus']),
+    weapon_sizes: checklist(values(s.weapon_sizes), ['Auxiliary','Main','Heavy','Superheavy']),
+    system_types: checklist(values(s.system_types), ['AI','Armor','Deployable','Drone','Flight System','Integrated','Mod','Shield','System','Tech']),
+  };
 }
 function bonus(b) {
   return {
@@ -166,10 +178,7 @@ function bits(d) {
       lid: t.id || t.lid || "",
       val: text(t.val ?? 0),
     })),
-    synergies: list(d.synergies).map((s) => ({
-      ...s,
-      locations: list(s.locations),
-    })),
+    synergies: list(d.synergies).map(synergy),
     deployables: list(d.deployables)
       .map((x) => (typeof x === "string" ? x : x.id))
       .filter(Boolean),
@@ -352,6 +361,8 @@ export function toNativeItem(entry) {
       passive_actions: list(c.passive_actions).map(action),
       active_bonuses: list(c.active_bonuses).map(bonus),
       passive_bonuses: list(c.passive_bonuses).map(bonus),
+      active_synergies: list(c.active_synergies).map(synergy),
+      passive_synergies: list(c.passive_synergies).map(synergy),
     };
   }
   const stable = `${type}:${state.instanceId || state.id || d.id || entry.key}`;
@@ -593,6 +604,7 @@ export async function prepareSheetPlan({
   parts,
   game,
   validateItem,
+  validateActor,
 }) {
   permission(actor, game);
   validateSheet(sheet);
@@ -729,11 +741,19 @@ export async function prepareSheetPlan({
               `${op.data.name}: o schema do Lancer recusou o conteúdo (${e.message}). Nenhuma alteração será aplicada.`,
             );
           }
+  if (validateActor)
+    for (const doc of documents) {
+      try { await validateActor(plannedActorData(doc, parts), doc); }
+      catch (error) {
+        doc.blocked = true;
+        warnings.push(`${doc.raw.name}: o Lancer recusou o ator completo (${error.message}). Nenhuma alteração será aplicada.`);
+      }
+    }
   return {
     summary: `${raw.name} • ${documents.length} documento(s) • ${changes.length} alteração(ões) para revisar`,
     warnings: [...new Set(warnings)],
     changes,
-    blocked: documents.some((d) => d.items.some((i) => i.blocked)),
+    blocked: documents.some((d) => d.blocked || d.items.some((i) => i.blocked)),
     documents,
     parts: copy(parts),
     preparedAt: Date.now(),
@@ -824,6 +844,39 @@ function loadoutPatch(doc, refs) {
     "system.loadout.weapon_mounts": weapon_mounts,
   };
 }
+function mergeSource(target, source) {
+  for (const [key, value] of Object.entries(source)) {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      if (!target[key] || typeof target[key] !== 'object' || Array.isArray(target[key])) target[key] = {};
+      mergeSource(target[key], value);
+    } else target[key] = copy(value);
+  }
+  return target;
+}
+// A complete temporary source lets Foundry validate loadouts and actor fields
+// before any embedded item is written. Preview IDs never enter the world.
+export function plannedActorData(doc, parts) {
+  const source = doc.before ? copy(doc.before) : {name:doc.raw.name, type:doc.type, system:{}, items:[]};
+  const items = new Map(list(source.items).map(item => [item._id, item])), refs = new Map();
+  let index = 0;
+  for (const op of doc.items) {
+    if (op.kind === 'delete') { items.delete(op.id); continue; }
+    if (!op.data) continue;
+    let id = op.id;
+    if (!id) do { id = `ts${String(++index).padStart(14,'0')}`; } while (items.has(id));
+    items.set(id, mergeSource(copy(items.get(id) || {}), {...copy(op.data), _id:id}));
+    for (const path of [op.sourcePath, ...(op.aliasPaths || [])]) refs.set(JSON.stringify(path), id);
+  }
+  const patch = {...doc.patch, ...(parts.build ? loadoutPatch(doc, refs) : {})};
+  for (const [key, value] of Object.entries(patch)) {
+    if (!key.includes('.')) { mergeSource(source, {[key]:value}); continue; }
+    const path = key.split('.'); let target = source;
+    for (const segment of path.slice(0,-1)) target = target[segment] ||= {};
+    target[path.at(-1)] = copy(value);
+  }
+  source.items = [...items.values()];
+  return source;
+}
 async function restoreActor(actor, before) {
   const now = currentItems(actor),
     old = list(before.items),
@@ -852,6 +905,7 @@ export async function applySheetPlan({
   createActor,
   saveBackup,
   resolvePortrait,
+  verifyActor,
 }) {
   const pilot = plan.documents[0]?.actor;
   permission(pilot, game);
@@ -876,7 +930,10 @@ export async function applySheetPlan({
   if (resolvePortrait) {
     for (const doc of plan.documents) if (doc.patch.img) {
       const source = doc.patch.img;
-      if (!downloaded.has(source)) downloaded.set(source, await resolvePortrait(doc.actor || pilot, source));
+      if (!downloaded.has(source)) {
+        try { downloaded.set(source, await resolvePortrait(doc.actor || pilot, source)); }
+        catch(error) { throw new Error(`Retrato de ${doc.raw.name}: ${error.message} A ficha não foi alterada. Revise a URL em Retrato por URL.`); }
+      }
       const resolved=downloaded.get(source), path=typeof resolved==='string'?resolved:resolved?.url;
       portraitCapabilities.set(doc,typeof resolved==='string'||resolved?.editable!==false);
       if (typeof path !== 'string' || !path) throw new Error('Não foi possível validar o endereço do retrato importado.');
@@ -953,6 +1010,18 @@ export async function applySheetPlan({
         patch[`flags.${ID}.sheetProject`] = linked;
       }
       await doc.actor.update(patch);
+    }
+    if (plan.parts.mechs) {
+      const mechs = plan.documents.filter(doc => doc.type === 'mech');
+      if (mechs.length) {
+        const preferred = sheet.data.favorite_mech || sheet.data.state?.active_mech_id;
+        const active = mechs.find(doc => doc.raw.id === preferred) || mechs[0];
+        await pilot.update({'system.active_mech':active.actor.uuid});
+      }
+    }
+    if (verifyActor) for (const doc of touched) {
+      try { await verifyActor(doc.actor); }
+      catch(error) { throw new Error(`${doc.raw.name}: a ficha nativa do Lancer não pôde ser preparada (${error.message}).`); }
     }
   } catch (error) {
     const restored = await Promise.allSettled(

@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {loadoutEntries,unitActions,mountTitle,sheetUnitIndex} from "./sheet-navigation.js";
+import {ruleGroups,sheetDiagnostics,originLabels,ruleLabels} from './sheet-rules.js';
+import {ImageURLForm} from './ImageURLForm.jsx';
 import DOMPurify from "dompurify";
 import { readDraft, writeDraft } from "./storage.js";
 import {
@@ -102,6 +104,34 @@ function Rules({ value }) {
       dangerouslySetInnerHTML={{ __html: clean(value) }}
     />
   ) : null;
+}
+function LazyDetails({summary,children,className=''}) {
+  const [open,setOpen]=useState(false);
+  return <details className={className} onToggle={e=>setOpen(e.currentTarget.open)}><summary>{summary}</summary>{open && children()}</details>;
+}
+function RuleOrigin({group,sheet,editing,edit,useAction}) {
+  const [open,setOpen]=useState(false);
+  const counts=Object.entries(group.counts).filter(([,n])=>n).map(([kind,n])=>`${n} ${n===1?({action:'ação',passive:'passiva',effect:'efeito',info:'descrição'})[kind]:ruleLabels[kind].toLowerCase()}`).join(' · ');
+  return <article className={`ts-rule-origin ${!group.active?'ts-sheet-inactive':''}`}>
+    <button className="ts-rule-origin-toggle" aria-expanded={open} onClick={()=>setOpen(!open)}>
+      <Ic name={open?'chevron-down':'chevron-right'}/><span><strong>{group.name}</strong><small>{originLabels[group.origin]}{group.loadout?` • ${group.loadout}`:''}{!group.active?' • Inativo':''}</small></span><span className="ts-rule-counts">{counts||'Dados adicionais'}</span>
+    </button>
+    {open && <div className="ts-rule-origin-body">
+      {['action','passive','effect','info'].map(type=>group.rules.some(r=>r.type===type) && <section key={type} aria-label={`${ruleLabels[type]} de ${group.name}`}>
+        <h3>{ruleLabels[type]} <small>{group.counts[type]}</small></h3>
+        <div className="ts-sheet-actions-grid">{group.rules.filter(r=>r.type===type).map(r=><article key={r.key} className={`ts-sheet-card ${!r.active?'ts-sheet-inactive':''}`}>
+          <div className="ts-sheet-row-head"><h4>{r.action?r.name:r.name.replace(`${group.name} • `,'')}</h4>{r.action && <span className="ts-sheet-chip">{r.action.activation==='None'?'Sem custo de ação':r.action.activation||'Ativação não informada'}</span>}</div>
+          <p className="ts-sheet-item-meta">{r.owner}{!r.active?' • Rank ou loadout inativo':''}{r.action?.frequency?` • ${r.action.frequency}`:''}{r.action?.heat_cost?` • ${r.action.heat_cost} calor`:''}</p>
+          <div className="ts-sheet-rule-preview"><Rules value={r.action?.terse || (!r.action?r.value:'')}/></div>
+          <LazyDetails summary="Regra completa">{()=> <><Rules value={r.action?.trigger}/><Rules value={r.action?.detail}/><Rules value={r.action?.effect}/>{!r.action && <Rules value={r.value}/>}</>}</LazyDetails>
+          {editing && <LazyDetails summary="Editar esta regra">{()=> <RawTree value={r.action||r.value} path={r.path} edit={edit} editing/>}</LazyDetails>}
+          {r.action && (r.type==='action'||frequencyLimit(r.action.frequency)) && <div className="ts-sheet-action-footer"><small>{sheet.tracking?.uses?.[r.key]||0} uso(s) registrados</small><button className="ts-button" disabled={!editing||!r.active||Boolean(frequencyLimit(r.action.frequency)&&(sheet.tracking?.uses?.[r.key]||0)>=frequencyLimit(r.action.frequency).limit)} onClick={()=>useAction(r)}>Registrar uso</button></div>}
+        </article>)}</div>
+      </section>)}
+      {!group.rules.length && <p className="ts-sheet-muted">Esta origem contém dados adicionais. Abra o conteúdo abaixo para consultar ou editar.</p>}
+      <LazyDetails summary="Todos os dados desta origem">{()=> <RawTree value={group.entry.data} path={group.entry.dataPath} edit={edit} editing={editing}/>}</LazyDetails>
+    </div>}
+  </article>;
 }
 function Field({
   label,
@@ -305,10 +335,10 @@ function ItemCard({ entry, editing, edit, remove, host }) {
           </span>
         )}
         {entry.item.destroyed && <span>Destruído</span>}
-        {d.damage && (
+        {Array.isArray(d.damage) && (
           <span>{d.damage.map((x) => `${x.val} ${x.type}`).join(" • ")}</span>
         )}
-        {d.range && (
+        {Array.isArray(d.range) && (
           <span>{d.range.map((x) => `${x.type} ${x.val}`).join(" • ")}</span>
         )}
       </div>
@@ -322,8 +352,7 @@ function ItemCard({ entry, editing, edit, remove, host }) {
           • detalhes abaixo
         </p>
       )}
-      <details>
-        <summary>Descrição e regras completas</summary>
+      <LazyDetails summary="Descrição e regras completas">{()=> <>
         <Rules value={d.description} />
         <Rules value={d.effect} />
         <Rules value={d.detail} />
@@ -357,7 +386,7 @@ function ItemCard({ entry, editing, edit, remove, host }) {
             <Rules value={a.detail} />
           </details>
         ))}
-      </details>
+      </>}</LazyDetails>
       {editing && (
         <>
           <button className="ts-button" onClick={() => setDetailed(!detailed)}>
@@ -547,6 +576,9 @@ export function SheetEditor({ host = {} }) {
     [abilityTab,setAbilityTab] = useState('talents'),
     [includeInactive,setIncludeInactive] = useState(false),
     [activation,setActivation] = useState(''),
+    [ruleKind,setRuleKind]=useState(''),
+    [focusedIssue,setFocusedIssue]=useState(null),
+    [portraitFailures,setPortraitFailures]=useState({}),
     [unitSelection, setUnitIndex] = useState(-1),
     [loadoutIndex, setLoadoutIndex] = useState(0),
     [modal, setModal] = useState(null),
@@ -671,10 +703,14 @@ export function SheetEditor({ host = {} }) {
   const unit = unitIndex < 0 ? data : data?.mechs?.[unitIndex],
     unitPath = unitIndex < 0 ? [] : ["mechs", unitIndex];
   useEffect(()=>{if(data){setUnitIndex(-1);setLoadoutIndex(data.active_index||0);}},[data?.id]);
+  const diagnostics=useMemo(()=>data?sheetDiagnostics(data):[],[data]);
+  const groups=useMemo(()=>data?ruleGroups(data,unitIndex,{includeInactive,origin:category,kind:ruleKind,activation,query}):[],[data,unitIndex,includeInactive,category,ruleKind,activation,query]);
   const portrait = useMemo(()=>{
     try { return pilotPortrait(unit) || (unitIndex < 0 ? host.source || '' : ''); }
     catch { return ''; }
   },[unit,unitIndex,host.source]);
+  const portraitFailure=portraitFailures[portrait]||'';
+  const imageIssues=Object.entries(portraitFailures).filter(([src])=>[data,...(data?.mechs||[])].some(unit=>{try{return pilotPortrait(unit)===src;}catch{return false;}})||host.source===src);
   function update(next, record = true, applying = false) {
     if (lock.current && !applying) return;
     if (record && latest.current) {
@@ -877,6 +913,7 @@ export function SheetEditor({ host = {} }) {
     );
   }
   function useAction(action) {
+    if(!editing || action.type==='passive' && !frequencyLimit(action.action.frequency))return;
     const limit = frequencyLimit(action.action.frequency);
     if (
       !action.active ||
@@ -951,7 +988,7 @@ export function SheetEditor({ host = {} }) {
     return () => window.removeEventListener("keydown", keyboard);
   }, []);
   function chooseUnit(index) {
-    setUnitIndex(index); setQuery('');setCategory('');setActivation('');
+    setUnitIndex(index); setQuery('');setCategory('');setActivation('');setRuleKind('');
     setLoadoutIndex(index<0 ? data.active_index||0 : data.mechs[index]?.active_loadout_index||0);
     if(index>=0 && ['pilot','abilities','equipment'].includes(section))setSection('mechs');
   }
@@ -978,6 +1015,7 @@ export function SheetEditor({ host = {} }) {
     ["combat", "Combate e recursos", "shield-halved"],
     ["notes", "Notas do mestre", "lock"],
     ["source", "Importação e histórico", "cloud-arrow-down"],
+    ["diagnostics", "Pendências", "list-check"],
     ["advanced", "Dados completos", "sliders"],
   ];
   const scopedActions = unitActions(actions,unitIndex,{includeInactive,activation,query});
@@ -1182,7 +1220,8 @@ export function SheetEditor({ host = {} }) {
       ) : (
         <>
           <header className="ts-sheet-header" inert={busy ? true : undefined}>
-            {portrait && <img className="ts-sheet-avatar" src={portrait} alt={`Retrato de ${unit?.name || data.name}`} />}
+            {portrait && !portraitFailure && <img className="ts-sheet-avatar" src={portrait} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={()=>setPortraitFailures(previous=>({...previous,[portrait]:`Retrato de ${unit?.name||data.name} não carregou. Confira a URL e o acesso à imagem.`}))} alt={`Retrato de ${unit?.name || data.name}`} />}
+            {portraitFailure && <span className="ts-sheet-avatar ts-avatar-failed" title={portraitFailure}><Ic name="image"/></span>}
             <div>
               <div className="ts-sheet-eyebrow">
                 {unitIndex<0 ? "Piloto" : "Mecha"} •{" "}
@@ -1191,7 +1230,7 @@ export function SheetEditor({ host = {} }) {
               <h1>{unitIndex<0 ? data.callsign || data.name : unit?.name}</h1>
               <p className="ts-sheet-subtitle">
                 {unitIndex<0 ? data.name : `${unit?.frameData?.name || unit?.frame || "Frame"} • Piloto: ${data.callsign || data.name}`} {data.player_name ? `• ${data.player_name}` : ""} •{" "}
-                {unitActions(actions,unitIndex,{includeInactive:true}).length} ações descritas
+                {unitActions(actions,unitIndex,{includeInactive:true}).length} habilidades descritas
               </p>
             </div>
             <div className="ts-sheet-header-actions">
@@ -1219,7 +1258,9 @@ export function SheetEditor({ host = {} }) {
           </header>
           <div className="ts-sheet-context" inert={busy?true:undefined}>
             {unitSelect()}
+            {editing && <button className="ts-button" onClick={()=>setModal('portrait-url')}><Ic name="link"/> Retrato por URL</button>}
             <span className={`ts-sheet-mode ${editing?'is-editing':''}`}><Ic name={editing?'pen-to-square':'eye'}/>{editing?'Editando rascunho':'Modo leitura'}</span>
+            <button className="ts-button ts-diagnostic-shortcut" onClick={()=>selectSection('diagnostics')}><Ic name="list-check"/> {diagnostics.length+imageIssues.length} pendência(s)</button>
             <span className="ts-sheet-context-hint">{host.isFoundry ? 'Aplique ao ator para confirmar as alterações.' : 'Alterações ficam na sua cópia local.'}</span>
           </div>
           <div className="ts-sheet-layout" inert={busy ? true : undefined}>
@@ -1235,6 +1276,7 @@ export function SheetEditor({ host = {} }) {
                   <Ic name={icon} />
                   {name}
                   {id === "actions" && <small>{unitActions(actions,unitIndex).length}</small>}
+                  {id === 'diagnostics' && <small>{diagnostics.length+imageIssues.length}</small>}
                   {id === 'mechs' && <small>{data.mechs.length}</small>}
                 </button>
                 </React.Fragment>
@@ -1436,74 +1478,25 @@ export function SheetEditor({ host = {} }) {
                   {!all.some(e=>e.kind===abilityTab && filter(e)) && <div className="ts-sheet-empty-category"><Ic name="folder-open"/><p>Nenhum conteúdo nesta categoria{query?' para a busca atual':''}.</p>{editing && <button className="ts-button" onClick={()=>{setNewKind(abilityTab);setModal('add');}}>Adicionar {labels[abilityTab].toLowerCase()}</button>}</div>}
                 </>
               )}
-              {section === 'actions' && (
-                <>
-                  {title('Ações e efeitos',`Ações de ${unit?.name || data.name}. Contadores registram usos; a resolução das regras continua com o mestre.`)}
-                  <div className="ts-sheet-search">
-                    <input aria-label="Buscar ação" placeholder="Buscar ação, origem ou regra…" value={query} onChange={e=>setQuery(e.target.value)}/>
-                    <select aria-label="Tipo de ação" value={activation} onChange={e=>setActivation(e.target.value)}><option value="">Todos os tipos</option>{[...new Set(unitActions(actions,unitIndex,{includeInactive:true}).map(a=>a.action.activation).filter(Boolean))].map(type=><option key={type}>{type}</option>)}</select>
-                    <button className="ts-button" aria-pressed={includeInactive} onClick={()=>setIncludeInactive(!includeInactive)}>Mostrar inativas</button>
-                  </div>
-                  <p className="ts-sheet-muted">{scopedActions.length} ação(ões) • {includeInactive?'Inclui ranks e loadouts inativos':'Somente ranks adquiridos e loadouts ativos'}</p>
-                  <div className="ts-sheet-section-title ts-sheet-actions-title">
-                    <h3>Regras e frequência</h3>
-                  </div>
-                  <div className="ts-sheet-actions-grid">
-                    {scopedActions
-                      .map((a) => (
-                        <article key={a.key} className={`ts-sheet-card ${!a.active?"ts-sheet-inactive":""}`}>
-                          <div className="ts-sheet-row-head">
-                            <h3>{a.name}</h3>
-                            <span className="ts-sheet-chip">
-                              {a.action.activation || "Não informado"}
-                            </span>
-                          </div>
-                          <p className="ts-sheet-muted">{a.owner}</p>
-                          <p className="ts-sheet-item-meta">
-                            {a.action.frequency || "Frequência não informada"}
-                            {!a.active ? " • Rank ou loadout inativo" : ""}
-                            {a.action.heat_cost
-                              ? ` • ${a.action.heat_cost} calor`
-                              : ""}
-                          </p>
-                          <Rules value={a.action.terse} />
-                          <details>
-                            <summary>Gatilho e efeito completos</summary>
-                            <Rules value={a.action.trigger} />
-                            <Rules value={a.action.detail} />
-                            {editing && (
-                              <RawTree
-                                value={a.action}
-                                path={a.path}
-                                edit={edit}
-                                editing
-                              />
-                            )}
-                          </details>
-                          <div className="ts-sheet-action-footer">
-                            <small>
-                              {sheet.tracking?.uses?.[a.key] || 0} uso(s)
-                              registrados
-                            </small>
-                            <button
-                              className="ts-button"
-                              disabled={
-                                !editing ||
-                                !a.active ||
-                                (frequencyLimit(a.action.frequency) &&
-                                  (sheet.tracking?.uses?.[a.key] || 0) >=
-                                    frequencyLimit(a.action.frequency).limit)
-                              }
-                              onClick={() => useAction(a)}
-                            >
-                              Registrar uso
-                            </button>
-                          </div>
-                        </article>
-                      ))}
-                  </div>
-                </>
-              )}
+              {section === 'actions' && <>
+                {title('Ações e efeitos',`Regras de ${unit?.name||data.name}, agrupadas por origem. Abra uma arma, sistema ou talento para consultar suas regras.`)}
+                <div className="ts-rule-filters">
+                  <input aria-label="Buscar ação" placeholder="Buscar equipamento, ação ou regra…" value={query} onChange={e=>setQuery(e.target.value)}/>
+                  <select aria-label="Origem das regras" value={category} onChange={e=>setCategory(e.target.value)}><option value="">Todas as origens</option>{Object.entries(originLabels).map(([key,label])=><option value={key} key={key}>{label}</option>)}</select>
+                  <select aria-label="Categoria da regra" value={ruleKind} onChange={e=>{setRuleKind(e.target.value);setActivation('');}}><option value="">Todas as regras</option>{Object.entries(ruleLabels).map(([key,label])=><option value={key} key={key}>{label}</option>)}</select>
+                  <select aria-label="Tipo de ação" value={activation} onChange={e=>setActivation(e.target.value)}><option value="">Todas as ativações</option>{[...new Set(unitActions(actions,unitIndex,{includeInactive:true}).map(a=>a.action.activation).filter(Boolean))].map(type=><option key={type}>{type}</option>)}</select>
+                  <button className="ts-button" aria-pressed={includeInactive} onClick={()=>setIncludeInactive(!includeInactive)}>Mostrar inativas</button>
+                </div>
+                <p className="ts-sheet-muted">{groups.length} origem(ns) • {groups.reduce((sum,g)=>sum+g.rules.length,0)} regras encontradas • {includeInactive?'Inclui ranks e loadouts inativos':'Ranks adquiridos e loadouts ativos'}</p>
+                <div className="ts-rule-origins">{groups.map(group=><RuleOrigin key={group.key} group={group} sheet={sheet} editing={editing} edit={edit} useAction={useAction}/>)}</div>
+                {!groups.length && <div className="ts-sheet-empty-category"><Ic name="magnifying-glass"/><p>Nenhuma origem corresponde aos filtros.</p><button className="ts-button" onClick={()=>{setQuery('');setCategory('');setRuleKind('');setActivation('');}}>Limpar filtros</button></div>}
+              </>}
+              {section==='diagnostics' && <>
+                {title('Pendências da ficha','Confira a origem de cada problema. Esta lista cobre piloto e todos os mechas; os dados originais continuam acessíveis.')}
+                {imageIssues.map(([src,message])=><article className="ts-sheet-card ts-diagnostic" key={src}><h3>Imagem indisponível</h3><p>{message}</p><small className="ts-url-address">{src}</small><button className="ts-button" onClick={()=>setPortraitFailures(previous=>{const next={...previous};delete next[src];return next;})}>Tentar carregar novamente</button></article>)}
+                {diagnostics.map(issue=><article className="ts-sheet-card ts-diagnostic" key={issue.key}><div className="ts-sheet-row-head"><h3>{issue.name}</h3><span className="ts-sheet-chip">{issue.unitIndex<0?'Piloto':data.mechs[issue.unitIndex]?.name||'Mecha'}</span></div><p>{issue.reason}</p><button className="ts-button" onClick={()=>{setFocusedIssue(issue);setModal('issue');}}>Ver origem e dados</button></article>)}
+                {!diagnostics.length && !imageIssues.length && <div className="ts-sheet-empty-category"><Ic name="circle-check"/><p>Nenhuma pendência estrutural detectada.</p><small>A organização não valida automaticamente todas as regras e derivados do Lancer.</small></div>}
+              </>}
               {section === "equipment" && (
                 <>
                   {title(
@@ -1987,6 +1980,8 @@ export function SheetEditor({ host = {} }) {
           </footer>
         </>
       )}
+      {modal==='portrait-url' && <Dialog title="Retrato por URL" onClose={()=>setModal(null)}><ImageURLForm portraitOnly initial={/^https:/.test(portrait)?portrait:''} onClose={()=>setModal(null)} onUse={async url=>{edit([...unitPath,'img'],{...(typeof unit?.img==='object'?unit.img:{}),cloud_portrait:url});setModal(null);setNotice('Retrato por URL atualizado na cópia. Aplique ao ator para confirmar o vínculo.');}}/></Dialog>}
+      {modal==='issue' && focusedIssue && <Dialog title={`Origem: ${focusedIssue.name}`} onClose={()=>setModal(null)} wide><p>{focusedIssue.reason}</p><p className="ts-sheet-muted">Localização: {focusedIssue.path.join(' → ')}</p><RawTree value={getPath(data,focusedIssue.path)} path={focusedIssue.path} edit={edit} editing={editing}/></Dialog>}
       {modal === "import" && (
         <Dialog
           title="Carregar / atualizar ficha"
@@ -2211,7 +2206,7 @@ export function SheetEditor({ host = {} }) {
           <p className="ts-sheet-muted">
             A sincronização de build atualiza apenas itens gerenciados pelo
             Token Studio. Itens externos são preservados e podem gerar avisos de
-            duplicidade. O retrato é guardado no Foundry. Um token com imagem
+            duplicidade. O retrato usa sua URL pública, sem cópia local. URLs temporárias podem expirar. Um token com imagem
             própria mantém sua arte, moldura e configurações; um token padrão
             recebe a imagem do piloto como ponto de partida.
           </p>

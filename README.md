@@ -1,4 +1,4 @@
-# Token Studio — v0.2.6
+# Token Studio — v0.2.7
 
 Editor independente de retratos e tokens, catálogo de molduras e painel de ficha COMP/CON para o mestre. Interface baseada na proposta visual escolhida: tema escuro, destaque violeta, imagem grande e controles diretos.
 
@@ -24,12 +24,13 @@ O Tokenizer não é necessário. Esta versão não depende de outros módulos. F
 
 ## Vincular ficha COMP/CON ao ator
 
-Abra Token Studio no ator piloto → **Ficha do mestre** → importe o link/código ou JSON → **Vincular / atualizar ator…** → revise e aplique. Identidade, retrato, build, recursos e mechas começam selecionados. O código e a data de sincronização passam à ficha nativa do Lancer. O retrato é guardado em Data e aparece na ficha e no editor; um token personalizado mantém sua arte e seus ajustes. O token padrão fica vinculado ao ator. Para buscar uma versão nova, use **Atualizar origem**, revise e aplique novamente. Não há sincronização em segundo plano nem escrita na conta COMP/CON.
+Abra Token Studio no ator piloto → **Ficha do mestre** → importe o link/código ou JSON → **Vincular / atualizar ator…** → revise e aplique. Identidade, retrato, build, recursos e mechas começam selecionados. O código e a data de sincronização passam à ficha nativa do Lancer. O retrato é validado e usado por URL, sem cópia local, e aparece na ficha; um token personalizado mantém sua arte e seus ajustes. O token padrão fica vinculado ao ator. Para buscar uma versão nova, use **Atualizar origem**, revise e aplique novamente. Não há sincronização em segundo plano nem escrita na conta COMP/CON.
 
 ## Usar
 
 - Escolha **Retrato** ou **Token**. Cada um tem imagem e enquadramento próprios.
 - Importe uma imagem por **Trocar imagem**, arraste um arquivo para a janela ou cole uma imagem. No Foundry, Trocar imagem abre o seletor de arquivos; arquivos locais também podem ser arrastados/colados.
+- **Usar URL** valida uma imagem HTTPS pública e mostra sua prévia antes de usar. Links Google com `imgurl` e páginas acessíveis com imagem de prévia são resolvidos; links de busca, pins ou mensagens podem exigir o endereço direto da imagem.
 - Arraste a arte para posicionar e role a roda do mouse sobre ela para aumentar ou diminuir o zoom. O gesto entra no desfazer e mantém os ajustes de retrato/token independentes. O zoom mantém a proporção. As setas do teclado também movem a arte; Shift aumenta o passo.
 - **Preencher** limita o movimento para evitar espaços vazios. **Mostrar inteira** começa mostrando a imagem completa. **Livre** permite deslocar e reduzir sem limites de preenchimento.
 - **Importar borda**, ao lado do título Moldura, aceita PNG/WebP com transparência. A abertura central fechada é detectada automaticamente. Bordas abertas podem ser ajustadas manualmente em Avançado.
@@ -46,6 +47,10 @@ As molduras favoritadas aparecem primeiro no catálogo e até seis atalhos ficam
 ## Ficha do mestre
 
 Mude para **Ficha do mestre**, cole o link público COMP/CON v3 e carregue. Ative Editar ficha para modificar sua cópia; atualizações têm revisão por grupo e preservam alterações locais por padrão. A navegação separa **Perfil narrativo**, **Perfil tático**, **Loadout do piloto** e **Hangar**. O seletor de unidade acompanha a navegação; ações, combate e equipamentos mostram o piloto ou mecha escolhido. O perfil tático agrupa gatilhos, talentos, licenças e core bonuses em abas, com ranks adquiridos e regras completas expansíveis. No hangar, selecione o mecha e seu loadout para consultar frame, traits, core system, montagens, armas e sistemas. **Editar ficha** abre os campos editáveis; o modo de leitura apresenta valores claros. JSON e histórico ficam nas ferramentas do mestre. Os homebrews e campos adicionais permanecem no projeto.
+
+**Ações e efeitos** agrupa cada arma, sistema, talento, frame e demais origens em um cartão fechado com contagens de ações, passivas, efeitos e descrições. Combine busca, origem, categoria e ativação; ranks/loadouts inativos são opcionais. Abra uma origem para consultar suas regras. Regras `None` ficam em passivas, com frequência e gatilho preservados. **Pendências** aponta definições ausentes, dados sem classificação, listas inválidas e problemas de retrato, com acesso ao caminho original.
+
+Na edição da ficha, **Retrato por URL** atualiza a unidade selecionada. Ao aplicar ao ator, o módulo valida de novo e grava a URL, sem upload. Arquivos locais e resultados exportados usam um nome SHA-256 compartilhado entre atores: conteúdo idêntico reutiliza o arquivo existente. Arquivos antigos permanecem no mundo.
 
 No Foundry, **Revisar alterações** separa identidade/build/combate/mechas, mostra alterações antes de aplicar e salva um backup. A edição remota da conta COMP/CON não está implementada: você edita sua cópia e/ou documentos Foundry autorizados. Efeitos de ações, regras especiais, rolagens e derivados da cópia não são automatizados integralmente. Leia [COMP_CON_GUIDE.md](COMP_CON_GUIDE.md) para entender os destinos, conflitos e limites.
 
@@ -64,7 +69,7 @@ O editor foi exercitado no navegador e o núcleo tem testes automatizados de geo
 - Edição e exportação de tokens são estáticas. GIFs preservam o original, mostram aviso de exportação estática e permitem manter o retrato animado original sem recorte/moldura. Vídeos e exportação WebM ainda não estão implementados. Não há promessa de reprodução/animação completa no canvas.
 - Wildcards não são substituídos no token padrão: essa aplicação é interrompida. Tokens selecionados podem ser atualizados individualmente.
 - Não há edição por pincel, remoção automática de fundo, pilha arbitrária de camadas nem processamento em lote nesta versão. A composição atual é origem, fundo, recorte e borda.
-- URLs externas precisam permitir CORS para exportação. Importe o arquivo local quando o servidor externo bloquear o acesso.
+- URLs externas precisam permitir CORS para editar/exportar. Retratos que permitem apenas visualização podem ser vinculados à ficha; o editor indica o limite e preserva a arte atual do token. URLs temporárias, como anexos do Discord, podem expirar.
 - Rascunhos são locais ao navegador, usuário, mundo e personagem; não são compartilhados automaticamente. Aplicar salva o projeto no personagem. Exportar projeto cria uma cópia portátil.
 - Arquivos enviados antes de uma falha de atualização podem continuar na pasta de saída. O módulo não apaga arquivos antigos ou originais automaticamente.
 - Use um tema de borda próprio ou o anel dinâmico existente. Ao aplicar uma borda embutida, o anel dinâmico é desativado apenas no destino escolhido para evitar borda dupla; escala, visão, vida, equipamento e tamanho do token são preservados.

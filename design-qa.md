@@ -111,3 +111,10 @@ Revisão da interface existente a pedido do usuário, preservando carvão/violet
 Roda real aumentou/reduziu zoom do token e retrato independentemente; desfazer restaurou um gesto. Favoritas persistiram após recarregar, ficaram primeiro e aplicaram o original pelo atalho. Edição e desfazer, abas com ArrowRight/Home, dois mechas, loadout reserva e ações inativas foram exercitados. Erro de aplicação durante a regressão foi corrigido e retestado; avisos da extensão de automação não pertencem à origem da aplicação. Integração Foundry/Lancer real ainda pendente.
 
 final result: passed (desktop; integração real pendente)
+
+
+## 0.2.7 — Organização por origem e URLs
+
+Mantido o tema escolhido e a separação ficha/editor. QA desktop 1363 × 936: filtros combinados, cartão da Partidora com contagens, ações e passivas separadas, longas regras expansíveis. Mecha sintético de 90 ações apresentou cinco armas fechadas, 18 ações por arma, sem montar os 90 cartões de ação inicialmente; reserva/inativo e pendência apontaram os dados corretos. Registro manual de uso e desfazer confirmados; dados sintéticos removidos. Prévia do retrato CloudFront identificou 814 × 1200 e somente visualização, aceitando URL na ficha com aviso; editor não aceita essa URL para exportação. URL pública do PNG do repositório validou 1254 × 1254 e disponibilidade para edição. Captura: token-studio-v027-rules.jpg.
+
+Resultado: fluxo desktop conferido; integração Foundry/Lancer real pendente.

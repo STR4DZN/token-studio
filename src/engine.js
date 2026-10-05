@@ -14,6 +14,7 @@ export function validateProject(project) {
     const v = project.views?.[key];
     if (!v || typeof v.src !== 'string' || v.src.length > 50_000_000) throw new Error('Imagem de origem inválida.');
     if (/^(?:javascript|vbscript):/i.test(v.src) || (/^data:/i.test(v.src) && !/^data:image\/(png|jpeg|webp|gif);base64,/i.test(v.src))) throw new Error('Formato de imagem não permitido.');
+    if(v.displayOnly!=null && typeof v.displayOnly!=='boolean')throw new Error('Estado de acesso à imagem inválido.');
     for (const p of ['zoom', 'x', 'y', 'rotation', 'aperture', 'opacity']) if (!Number.isFinite(v[p])) throw new Error('Ajustes de imagem inválidos.');
     if (v.zoom < .1 || v.zoom > 8 || v.aperture < .1 || v.aperture > 1 || v.opacity < 0 || v.opacity > 1 || Math.abs(v.x) > 100 || Math.abs(v.y) > 100 || Math.abs(v.rotation) > 3600) throw new Error('Ajustes fora dos limites.');
     if (!['cover', 'contain', 'free'].includes(v.fit) || !['1:1', '2:3', '3:4', '16:9'].includes(v.aspect) || !['circle', 'rectangle'].includes(v.shape) || !['circle', 'auto', 'rectangle'].includes(v.mask)) throw new Error('Enquadramento inválido.');

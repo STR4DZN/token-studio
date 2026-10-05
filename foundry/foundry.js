@@ -1,7 +1,8 @@
 import { mountEditor } from './editor.js';
 import { assetPath } from './asset-path.js';
 import { isDefaultImage } from './actor-images.js';
-import { downloadPortrait } from './compcon.js';
+import { validateImageURL } from './image-url.js';
+import { imageFilename, storedImage } from './image-storage.js';
 import { applyTransaction } from './transaction.js';
 import {prepareSheetPlan,applySheetPlan,readNativePilot}from'./sheet-adapter.js';
 const ID = 'token-studio';
@@ -22,9 +23,24 @@ async function ensureFolder(path) {
     catch { await FilePicker.createDirectory('data', current); }
   }
 }
+const imageUploads = new Map();
 async function upload(actor, file, kind) {
   const base = game.settings.get(ID, 'outputFolder').replace(/^\/+|\/+$/g, '');
   if (!base || base.split('/').some(x => x === '..' || x === '.') || /^https?:|^modules\//i.test(base)) throw new Error('Defina uma pasta de saída dentro de Data, fora da pasta de módulos.');
+  if(file.type.startsWith('image/')) {
+    const folder=`${base}/images`, filename=await imageFilename(file), key=folder+'/'+filename;
+    if(imageUploads.has(key))return imageUploads.get(key);
+    const task=(async()=>{
+      await ensureFolder(folder);
+      const existing=storedImage((await picker().browse('data',folder)).files,filename);
+      if(existing)return existing;
+      const result=await picker().upload('data',folder,new File([file],filename,{type:file.type}),{},{notify:false});
+      if(!result?.path)throw new Error('O envio da imagem falhou. Confira a pasta de saída.');
+      return result.path;
+    })();
+    imageUploads.set(key,task);
+    try{return await task;}finally{imageUploads.delete(key);}
+  }
   const folder = `${base}/${safeSegment(actor.id)}/${kind}`;
   await ensureFolder(folder);
   const ext = file.type === 'application/json' ? 'json' : file.type === 'image/jpeg' ? 'jpg' : file.type === 'image/webp' ? 'webp' : file.type === 'image/gif' ? 'gif' : 'png';
@@ -43,17 +59,9 @@ async function persistEmbeddedSources(actor, project) {
   return saved;
 }
 async function storePortrait(actor, source) {
-  const blob = await downloadPortrait(source);
-  const url = URL.createObjectURL(blob);
-  try {
-    await new Promise((resolve,reject)=>{
-      const image = new Image();
-      image.onload = resolve;
-      image.onerror = ()=>reject(new Error('O retrato COMP/CON não pôde ser decodificado. Nenhum dado do ator foi alterado.'));
-      image.src = url;
-    });
-  } finally { URL.revokeObjectURL(url); }
-  return upload(actor, blob, 'compcon-originals');
+  if(source.startsWith('data:'))throw new Error('Este retrato está incorporado no JSON. Defina uma URL pública em Retrato por URL antes de aplicar.');
+  const result=await validateImageURL(source,{allowDisplayOnly:true});
+  return {url:result.url,editable:result.editable};
 }
 function selectedTokens(actor) { return (canvas.tokens?.controlled || []).filter(t => t.document.actorId === (actor.parent ? actor.parent.actorId : actor.id)).map(t => t.document); }
 async function open(actor, token = null, mode = 'images') {
@@ -83,10 +91,10 @@ Hooks.once('init', () => {
       const source = actorSource(actor);
       const tokenSource=isDefaultImage(actor.prototypeToken.texture.src)?null:imageRoute(actor.prototypeToken.texture.src);
       this._unmount = mountEditor(result, {
-        isFoundry:true, initialMode:this.initialMode,actorUuid:actor.uuid,sheetProject:actor.getFlag(ID,'sheetProject'),shareLink:actor.system?.cloud_id?.length===12?`https://compcon.app/link/pilot/${actor.system.cloud_id}/full/`:undefined,
+        isFoundry:true,portraitEditable:actor.getFlag(ID,'portraitSource')?.editable, initialMode:this.initialMode,actorUuid:actor.uuid,sheetProject:actor.getFlag(ID,'sheetProject'),shareLink:actor.system?.cloud_id?.length===12?`https://compcon.app/link/pilot/${actor.system.cloud_id}/full/`:undefined,
         readActorSheet:()=>readNativePilot(actor,game),openItem:async uuid=>(await fromUuid(uuid))?.sheet?.render(true),
         prepareSheetApply:(sheet,parts)=>prepareSheetPlan({actor,sheet,parts,game,validateItem:async(data,parent)=>{const candidate=new CONFIG.Item.documentClass(data,{parent});candidate.validate({strict:true});}}),
-        applySheet:async(plan,sheet)=>{const result=await applySheetPlan({plan,sheet,game,resolvePortrait:storePortrait,createActor:data=>CONFIG.Actor.documentClass.create(data),saveBackup:async snapshots=>{plan.backupPath=await upload(actor,new Blob([JSON.stringify({schema:'token-studio-foundry-backup-1',createdAt:Date.now(),world:game.world.id,documents:snapshots},null,2)],{type:'application/json'}),'backups');}});ui.notifications.info(`Token Studio: ficha aplicada. Backup: ${plan.backupPath}`);return {...result,name:actor.name,source:actorSource(actor),tokenSource:isDefaultImage(actor.prototypeToken.texture.src)?null:imageRoute(actor.prototypeToken.texture.src),shareLink:actor.system.cloud_id?`https://compcon.app/link/pilot/${actor.system.cloud_id}/full/`:'',sheetProject:actor.getFlag(ID,'sheetProject'),imageUpdate:result.portrait?{id:foundry.utils.randomID(),source:imageRoute(result.portrait)}:null};},
+        applySheet:async(plan,sheet)=>{const result=await applySheetPlan({plan,sheet,game,resolvePortrait:storePortrait,createActor:data=>CONFIG.Actor.documentClass.create(data),saveBackup:async snapshots=>{plan.backupPath=await upload(actor,new Blob([JSON.stringify({schema:'token-studio-foundry-backup-1',createdAt:Date.now(),world:game.world.id,documents:snapshots},null,2)],{type:'application/json'}),'backups');}});ui.notifications.info(`Token Studio: ficha aplicada. Backup: ${plan.backupPath}`);return {...result,name:actor.name,source:actorSource(actor),tokenSource:isDefaultImage(actor.prototypeToken.texture.src)?null:imageRoute(actor.prototypeToken.texture.src),shareLink:actor.system.cloud_id?`https://compcon.app/link/pilot/${actor.system.cloud_id}/full/`:'',sheetProject:actor.getFlag(ID,'sheetProject'),imageUpdate:result.portrait?{id:foundry.utils.randomID(),source:imageRoute(result.portrait),editable:result.portraitEditable}:null};},
         assetsBase:assetPath(route(`modules/${ID}/assets`)), name:actor.name, type:({pilot:'Piloto',mech:'Mech',npc:'NPC',deployable:'Deployable'})[actor.type] || actor.type,
         key:`${game.world.id}:${actor.uuid}:${game.user.id}`, source, project, tokenSource:tokenSource && !tokenSource.includes('mystery-man') && tokenSource!==actor.img ? tokenSource:null, sceneCount:selectedTokens(actor).length,getSceneCount:()=>selectedTokens(actor).length,
         presets:game.settings.get(ID, 'presets'), savePresets:items => game.settings.set(ID, 'presets', items),

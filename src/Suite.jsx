@@ -3,6 +3,7 @@ import { App } from "./App.jsx";
 import { SheetEditor } from "./SheetEditor.jsx";
 export function Suite({ host = {} }) {
   const [mode, setMode] = useState(host.initialMode || "images"),
+    [imageVisited,setImageVisited] = useState(host.initialMode !== 'sheet'),
     [sheetVisited, setSheetVisited] = useState(host.initialMode === "sheet"),
     [actorState,setActorState] = useState({});
   const boundHost = {...host,...actorState};
@@ -13,12 +14,12 @@ export function Suite({ host = {} }) {
   useEffect(() => {
     if (host.mode) {
       setMode(host.mode);
-      if (host.mode === "sheet") setSheetVisited(true);
+      if (host.mode === "sheet") setSheetVisited(true);else setImageVisited(true);
     }
   }, [host.mode]);
   function select(m) {
     setMode(m);
-    if (m === "sheet") setSheetVisited(true);
+    if (m === "sheet") setSheetVisited(true);else setImageVisited(true);
   }
   return (
     <div className="ts-app ts-suite">
@@ -44,9 +45,9 @@ export function Suite({ host = {} }) {
             : "Prévia local • alterações salvas neste navegador"}
         </span>
       </nav>
-      <div className="ts-suite-pane" hidden={mode !== "images"}>
-        <App host={boundHost} />
-      </div>
+      {imageVisited && <div className="ts-suite-pane" hidden={mode !== "images"}>
+        <App host={{...boundHost,visible:mode==='images'}} />
+      </div>}
       {sheetVisited && (
         <div className="ts-suite-pane" hidden={mode !== "sheet"}>
           <SheetEditor host={{...boundHost,onSheetApplied:sheetApplied}} />

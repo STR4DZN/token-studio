@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.7 — 2026-10-05
+
+- Regras por arma/sistema/talento/frame e demais origens, com contagens, ações/passivas/efeitos/descrições separados, filtros combinados e montagem do conteúdo ao abrir.
+- Pendências da ficha com unidade, origem e caminhos dos dados preservados, incluindo referências ausentes e regras sem classificação.
+- COMP/CON e imagens públicas usam URLs HTTPS validadas, sem upload automático de retrato; prévia, extração de Google imgurl/metadados acessíveis e avisos de expiração Discord.
+- Retrato disponível apenas para visualização pode ser vinculado ao ator; edição/exportação ficam bloqueadas e a arte do token é preservada quando a hospedagem impede CORS.
+- Arquivos locais e resultados exportados são reutilizados por SHA-256 entre atores, evitando cópias idênticas. Arquivos antigos não são apagados.
+- Testes de regressão para agrupamento, None/passivas, URLs, permissões de imagem, deduplicação e preservação de tokens. Foundry 13 + Lancer reais continuam pendentes.
+
 ## 0.2.6 — 2026-10-05
 
 - Adiciona zoom pela roda do mouse no palco de token/retrato, com limites de enquadramento e um desfazer por gesto; evita rolagem da janela durante o zoom.

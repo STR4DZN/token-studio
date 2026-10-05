@@ -927,3 +927,37 @@
 .ts-favorite-choice img {width:44px;height:44px;object-fit:contain;}
 .ts-favorite-choice span {font-size:9px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 @media(max-width:760px){.ts-sheet-context{padding:0 18px 14px;gap:10px;}.ts-sheet-context-hint{margin-left:0;}.ts-sheet-nav-group{display:none;}}
+
+/* Origins and URL workflow, scoped to the existing charcoal/lavender theme. */
+.ts-app .ts-rule-filters{display:grid;grid-template-columns:minmax(200px,2fr) repeat(3,minmax(135px,1fr)) auto;gap:8px;align-items:center;margin:18px 0 12px}
+.ts-app .ts-rule-filters input,.ts-app .ts-rule-filters select{min-width:0;width:100%;padding:11px;border:1px solid #41414d;border-radius:8px;background:#23232b;color:#eeeeF5;font:inherit}
+.ts-app .ts-rule-origins{display:grid;gap:10px;margin-top:18px}
+.ts-app .ts-rule-origin{border:1px solid #41414d;border-radius:12px;background:#24242c;overflow:hidden}
+.ts-app .ts-rule-origin-toggle{width:100%;display:flex;gap:14px;align-items:center;text-align:left;background:transparent;color:inherit;border:0;padding:17px 18px;cursor:pointer;font:inherit}
+.ts-app .ts-rule-origin-toggle:hover{background:#30303b}
+.ts-app .ts-rule-origin-toggle>i{color:#b5a2fa;font-size:12px}
+.ts-app .ts-rule-origin-toggle>span:first-of-type{flex:1;min-width:0}
+.ts-app .ts-rule-origin-toggle strong{display:block;font-size:14px;overflow-wrap:anywhere}
+.ts-app .ts-rule-origin-toggle small{display:block;color:#b6b6c6;font-size:11px;margin-top:5px}
+.ts-app .ts-rule-counts{color:#d0c1ff;font-size:11px;max-width:48%;line-height:1.6;text-align:right}
+.ts-app .ts-rule-origin-body{padding:8px 18px 18px;border-top:1px solid #41414d}
+.ts-app .ts-rule-origin-body>section{margin:12px 0 18px}
+.ts-app .ts-rule-origin-body h3{font-size:13px;margin:10px 0}
+.ts-app .ts-rule-origin-body h3 small{color:#b5a2fa;margin-left:5px}
+.ts-app .ts-rule-origin-body h4{font-size:13px;margin:0;overflow-wrap:anywhere}
+.ts-app .ts-rule-origin-body details{margin-top:10px}
+.ts-app .ts-diagnostic{margin:12px 0;border-left:3px solid #b5a2fa}
+.ts-app .ts-diagnostic p{font-size:12px;line-height:1.6}
+.ts-app .ts-sheet-context .ts-button{font-size:11px;padding:8px 10px}
+.ts-app .ts-url-form p{font-size:12px;line-height:1.6}
+.ts-app .ts-url-form input{width:100%;min-width:0;color:#efeff7;background:#23232b;border:1px solid #505060;border-radius:8px;padding:12px;font:inherit;box-sizing:border-box}
+.ts-app .ts-url-preview{border:1px solid #42424e;border-radius:10px;padding:12px;margin:15px 0;text-align:center;background:#222229}
+.ts-app .ts-url-preview img{max-height:220px;max-width:100%;object-fit:contain}
+.ts-app .ts-url-preview small{display:block;color:#bbbacc;overflow-wrap:anywhere;font-size:10px;max-height:60px;overflow:auto}
+.ts-app .ts-avatar-failed{display:grid;place-items:center;background:#303039;color:#b5a2fa}
+@media(max-width:1100px){.ts-app .ts-rule-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.ts-app .ts-rule-filters>input{grid-column:1/-1}}
+@media(max-width:650px){.ts-app .ts-rule-origin-toggle{flex-wrap:wrap}.ts-app .ts-rule-counts{max-width:none;text-align:left;margin-left:26px;width:100%}.ts-app .ts-rule-origin-body{padding:8px}.ts-app .ts-rule-filters{grid-template-columns:1fr}}
+
+.ts-app .ts-url-address{display:block;overflow-wrap:anywhere;font-size:10px;color:#bdbcca;margin:10px 0}
+
+.ts-app .ts-stage-readonly{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;box-sizing:border-box}.ts-app .ts-stage-readonly img{max-height:80%;max-width:100%;object-fit:contain}.ts-app .ts-stage-readonly p{font-size:12px;text-align:center;color:#d0c1ff}.ts-app img.ts-preview-readonly{object-fit:contain;max-width:100%;max-height:190px}

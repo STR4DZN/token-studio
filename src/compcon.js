@@ -430,6 +430,17 @@ export function entries(raw) {
     }
   return result;
 }
+// Rule origins include extra unit-level content without treating it as native equipment.
+export function ruleEntries(raw) {
+  const result=entries(raw);
+  const names={bond:'Bond',bondData:'Bond',actions:'Ações da unidade',active_actions:'Ações da unidade',passive_actions:'Passivas da unidade',traits:'Traits da unidade',core_system:'Core system',rules:'Regras adicionais',abilities:'Habilidades adicionais',custom_rules:'Regras personalizadas',custom_abilities:'Habilidades personalizadas',features:'Features'};
+  for(const [index,unit] of [raw,...(raw.mechs||[])].entries())for(const [key,name] of Object.entries(names)) {
+    const value=unit[key];if(value==null || typeof value!=='object' && typeof value!=='string' || key==='bond' && unit.bondData)continue;
+    const root=index?['mechs',index-1]:[], path=[...root,key], wrapped=Array.isArray(value)||typeof value==='string';
+    result.push({key:JSON.stringify(path),path,dataPath:wrapped?root:path,item:value,data:wrapped?{[key]:value}:value,kind:'other',name,extra:true});
+  }
+  return result;
+}
 export function allActions(raw) {
   const out = [];
   const visit = (obj, path, owner, active = true, rank = 3) => {
@@ -443,7 +454,8 @@ export function allActions(raw) {
         ["actions", "active_actions", "passive_actions"].includes(k) &&
         Array.isArray(v)
       ) {
-        for (const [i, a] of v.entries())
+        for (const [i, a] of v.entries()) {
+          if (!a || typeof a !== 'object' || Array.isArray(a)) continue;
           out.push({
             key: JSON.stringify([...path, k, i]),
             path: [...path, k, i],
@@ -452,6 +464,7 @@ export function allActions(raw) {
             action: a,
             active,
           });
+        }
       } else if (k === "ranks" && Array.isArray(v)) {
         v.forEach((r, i) =>
           visit(
@@ -466,7 +479,7 @@ export function allActions(raw) {
     }
   };
   // Enumerate definitions once, avoiding wrapper duplication.
-  for (const e of entries(raw)) {
+  for (const e of ruleEntries(raw)) {
     const isActive =
       e.path[0] === "loadouts"
         ? e.path[1] === (raw.active_index || 0)

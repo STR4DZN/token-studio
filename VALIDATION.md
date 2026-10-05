@@ -1,4 +1,13 @@
-# Validação — Token Studio 0.2.6
+# Validação — Token Studio 0.2.7
+
+## Organização e URLs na 0.2.7
+
+- 74 testes de domínio/bootstrap passam. As regressões novas cobrem origem/categoria/ranks/loadouts, regras None, dados extras, URLs/HTML/imagens, links Discord, hash e upload único entre dois atores.
+- Retrato por URL validado antes da aplicação, sem upload de imagem. Testes simulados conferem vínculo direto, token personalizado preservado e token padrão preservado quando a URL permite somente visualização.
+- Navegador: ficha pública Zetherion com Partidora dos Céus organizada em 5 ações, 4 passivas, 1 efeito e 3 descrições; registro de uso e desfazer. Mecha sintético com 90 ações ficou em cinco origens fechadas de 18 ações cada. Filtros de sistemas/passivas e busca de reserva respeitaram a unidade/loadout; item sem definição apareceu com caminho exato em Pendências. Fixture sintética removida após a conferência.
+- Retrato CloudFront da referência foi decodificado (814 × 1200), aceito apenas para visualização da ficha, com aviso de bloqueio para edição/exportação e preservação do token. Não houve upload dessa imagem.
+- URL pública do PNG do próprio repositório foi validada no navegador (1254 × 1254, disponível para edição); o fluxo mantém o endereço remoto. Cinco testes do pacote compilado e quatro da prévia também passaram, totalizando 83 testes.
+- Os testes do adaptador usam atores/FilePicker simulados. Não foi possível executar a integração em uma instalação real de Foundry 13 + Lancer neste ambiente.
 
 ## Navegação e controles na 0.2.6
 

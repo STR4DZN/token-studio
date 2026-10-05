@@ -17,6 +17,14 @@ class FakeActor{
 }
 const gameFor=(actors=[])=>({user:{isGM:true},system:{id:'lancer'},actors:{contents:actors}});
 const parts={identity:true,build:true,combat:false,mechs:false};
+test('URL somente para visualização preserva textura padrão e projeto do token',async()=>{
+ const data=raw();data.img={cloud_portrait:'https://img.test/p.png'};const project=createProject('old.png');project.views.token.zoom=2;
+ const actor=new FakeActor({flags:{'token-studio':{project}}});actor.prototypeToken.texture.src='systems/lancer/assets/icons/pilot.svg';
+ const tokenBefore=copy(actor.prototypeToken.texture),sheet=createSheet(data),plan=await prepare(actor,sheet,{portrait:true});
+ const result=await applySheetPlan({plan,sheet,game:gameFor([actor]),resolvePortrait:async()=>({url:data.img.cloud_portrait,editable:false})});
+ assert.equal(actor.img,data.img.cloud_portrait);assert.deepEqual(actor.prototypeToken.texture,tokenBefore);assert.deepEqual(actor.flags['token-studio'].project.views.token,project.views.token);assert.equal(actor.flags['token-studio'].project.views.portrait.displayOnly,true);assert.equal(result.portraitEditable,false);assert.equal(actor.flags['token-studio'].portraitSource.local,null);
+ const next=await prepare(actor,sheet,{portrait:false});const unchanged=await applySheetPlan({plan:next,sheet,game:gameFor([actor])});assert.equal(unchanged.portraitEditable,false);
+});
 async function prepare(actor,sheet=createSheet(raw()),options={}){return prepareSheetPlan({actor,sheet,parts:{...parts,...options},game:gameFor([actor])});}
 test('revisão é somente leitura e aplica identidade/build sem tocar arte nem combate',async()=>{
  const actor=new FakeActor({system:{hp:{value:5},loadout:{}}}),before=actor.toObject(),sheet=createSheet(raw()),plan=await prepare(actor,sheet);assert.deepEqual(actor.toObject(),before);assert.equal(actor.writes,0);

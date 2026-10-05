@@ -609,7 +609,7 @@ export async function prepareSheetPlan({
     patch.img = portrait;
     if (isDefaultImage(target?.prototypeToken?.texture?.src)) patch['prototypeToken.texture.src'] = portrait;
     const project = target?.getFlag?.(ID, 'project');
-    if (project?.views) patch[`flags.${ID}.project`] = syncPortraitProject(project, portrait);
+    if (project?.views) patch[`flags.${ID}.project`]=syncPortraitProject(project,portrait);
   }
   addPortrait(actor, raw, patch);
   const items = parts.build
@@ -872,13 +872,14 @@ export async function applySheetPlan({
       throw new Error(
         `${doc.actor.name} mudou no Foundry após a revisão. Reabra a revisão para evitar sobrescrever outra edição.`,
       );
-  const portraits = new Map(), downloaded = new Map();
+  const portraits = new Map(), portraitCapabilities=new Map(), downloaded = new Map();
   if (resolvePortrait) {
     for (const doc of plan.documents) if (doc.patch.img) {
       const source = doc.patch.img;
       if (!downloaded.has(source)) downloaded.set(source, await resolvePortrait(doc.actor || pilot, source));
-      const path = downloaded.get(source);
-      if (typeof path !== 'string' || !path) throw new Error('Não foi possível guardar o retrato importado.');
+      const resolved=downloaded.get(source), path=typeof resolved==='string'?resolved:resolved?.url;
+      portraitCapabilities.set(doc,typeof resolved==='string'||resolved?.editable!==false);
+      if (typeof path !== 'string' || !path) throw new Error('Não foi possível validar o endereço do retrato importado.');
       portraits.set(doc, path);
     }
     // Downloads can take time: do not overwrite changes made while they ran.
@@ -935,10 +936,11 @@ export async function applySheetPlan({
       const portrait = portraits.get(doc) || doc.patch.img;
       if (portrait) {
         patch.img = portrait;
-        if ('prototypeToken.texture.src' in patch) patch['prototypeToken.texture.src'] = portrait;
+        const editable=portraitCapabilities.get(doc)!==false;
+        if ('prototypeToken.texture.src' in patch) {if(editable)patch['prototypeToken.texture.src']=portrait;else delete patch['prototypeToken.texture.src'];}
         const project = doc.before?.flags?.[ID]?.project;
-        if (project?.views) patch[`flags.${ID}.project`] = syncPortraitProject(project, portrait);
-        patch[`flags.${ID}.portraitSource`] = {remote:doc.patch.img, local:portrait, importedAt:Date.now()};
+        if (project?.views) {const synced=syncPortraitProject(project,portrait);synced.views.portrait.displayOnly=!editable;if(!editable)synced.views.token=copy(project.views.token);patch[`flags.${ID}.project`]=synced;}
+        patch[`flags.${ID}.portraitSource`] = {remote:/^https:/.test(portrait)?portrait:doc.patch.img, local:/^https:/.test(portrait)?null:portrait, mode:/^https:/.test(portrait)?'url':'local', editable, importedAt:Date.now()};
       }
       if (doc.type === "pilot") {
         if (plan.parts.identity && patch['system.cloud_id']) patch['system.last_cloud_update'] = new Date().toISOString();
@@ -967,7 +969,7 @@ export async function applySheetPlan({
         : `Aplicação falhou; os documentos alterados foram restaurados. ${error.message}`,
     );
   }
-  return { applied: touched.length, portrait:portraits.get(plan.documents[0]) || plan.documents[0].patch.img || null };
+  return { applied: touched.length, portraitEditable:portraitCapabilities.has(plan.documents[0]) ? portraitCapabilities.get(plan.documents[0])!==false : pilot.getFlag?.(ID,'portraitSource')?.editable!==false,portrait:portraits.get(plan.documents[0]) || plan.documents[0].patch.img || null };
 }
 function packedDefinition(item) {
   const s = item.system?.toObject?.() || copy(item.system || {});

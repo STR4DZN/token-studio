@@ -1,26 +1,19 @@
-# Token Studio v0.2.1
+# Token Studio v0.2.2
 
-Versão para testar o editor independente de tokens e o painel de ficha COMP/CON no Foundry 13.
+Corrige a ausência de Token Studio no menu de contexto dos atores no Foundry 13.
+
+## Correções
+
+- Usa o evento público `getActorContextOptions`; o evento antigo deixou de existir no Foundry 13.
+- Abre o ator clicado e respeita as permissões do mestre.
+- Evita entradas duplicadas e sincroniza a versão da API.
 
 ## Instalação
 
-Em **Instalar módulo**, use:
+Atualize Token Studio para 0.2.2 e recarregue o mundo. Como mestre, clique com o botão direito no ator e escolha Token Studio.
 
-```text
-https://raw.githubusercontent.com/STR4DZN/token-studio/main/module.json
-```
+Manifesto: https://raw.githubusercontent.com/STR4DZN/token-studio/main/module.json
 
-Anexos: `module.json`, `token-studio.zip` e `SHA256SUMS.txt`. O ZIP contém o módulo compilado; os arquivos automáticos **Source code** contêm o projeto de desenvolvimento.
+## Validação
 
-## Alterações
-
-- Manifesto com URL estável para instalação e atualização e download fixado na versão.
-- Versão 0.2.1 sincronizada no projeto e nos manifestos.
-- ZIP de distribuição reconstruído e validado; o arquivo anterior estava incompleto.
-- Workflow de build, validação de tag e publicação de anexos nas próximas releases.
-
-## Validação e limites
-
-39 testes do editor, COMP/CON e adaptador Foundry passaram. Outros 4 testes da prévia também passaram. Builds da prévia e módulo concluídos; integridade de todas as entradas do ZIP verificada.
-
-A execução em **Foundry 13 + Lancer reais permanece pendente**. O manifesto não declara versão verificada. Faça o primeiro ensaio em um personagem de teste e siga `VALIDATION.md`.
+42 testes automatizados, incluindo novas verificações de abertura e permissões. A integração em Foundry 13 + Lancer reais aguarda confirmação; o manifesto não declara compatibilidade verificada.

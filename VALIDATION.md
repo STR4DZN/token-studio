@@ -1,8 +1,13 @@
-# Validação — Token Studio 0.2.0
+# Validação — Token Studio 0.2.2
+
+## Correção 0.2.2
+
+- A captura do usuário mostrou ausência de Token Studio no menu de atores. O código usava o evento removido `getActorDirectoryEntryContext`. Corrigido para `getActorContextOptions`, conforme a API pública v13 e foundryvtt/foundryvtt#12335.
+- Novos testes simulam o evento v13, o ator clicado, a coleção do aplicativo, permissões, duplicatas e abertura pelos cabeçalhos V1/V2. Esses testes não substituem a confirmação na instalação real do usuário.
 
 ## Verificado neste ambiente
 
-- **39 testes automatizados de domínio/integração simulada passaram**, mais **4 testes da prévia Sites**. Cobrem geometria, estados separados, aplicação de imagens e compensação de falha; bootstrap/permissões/janela; validação do link e JSON, preservação de extensões, protocolo público, conflitos, grupos atômicos, ranks/loadouts, caminhos de mods/montagens, dano/recuperação e frequências; revisão de ficha sem escrita, destinos, adoção, remoção restrita, instâncias em vários loadouts, concorrência, schema recusado, rollback, falha de backup, leitura de mecha e referências nativas.
+- **42 testes automatizados de domínio/integração simulada passaram**, mais **4 testes da prévia Sites**. Cobrem geometria, estados separados, aplicação de imagens e compensação de falha; bootstrap/permissões/janela; validação do link e JSON, preservação de extensões, protocolo público, conflitos, grupos atômicos, ranks/loadouts, caminhos de mods/montagens, dano/recuperação e frequências; revisão de ficha sem escrita, destinos, adoção, remoção restrita, instâncias em vários loadouts, concorrência, schema recusado, rollback, falha de backup, leitura de mecha e referências nativas.
 - Build da prévia e do módulo concluídos. Manifesto e caminhos dos arquivos empacotados conferidos. O manifesto não declara compatibilidade verificada.
 - Link real `https://compcon.app/link/pilot/1HM40U8YCU35/full/` carregado pelo próprio painel no navegador. Resultado: Zetherion / Angelus Principii, LL 8, 5 gatilhos, 4 talentos, 2 core bonuses, 2 loadouts, 45 ações descritas e 0 mechas. O conteúdo homebrew foi preservado. O resolvedor Python também baixou a cópia publicada com sucesso.
 - No navegador: editar nome, atualização do mesmo piloto preservando o valor local por padrão, seleção explícita do valor remoto, aplicação ao rascunho, desfazer/refazer e recuperação após recarregamento. Importação do mesmo JSON por seletor de arquivo resultou em revisão sem diferenças.

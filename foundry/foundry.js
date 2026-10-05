@@ -95,8 +95,22 @@ Hooks.once('init', () => {
     }
     async _onClose(options) { this._unmount?.(); this._unmount = null; windows.delete(this.actor.uuid); await super._onClose(options); }
   };
-  const api = { open,openSheet:actor=>open(actor,null,'sheet'), version:'0.2.0' }; game.modules.get(ID).api = api;
+  const api = { open,openSheet:actor=>open(actor,null,'sheet'), version:game.modules.get(ID).version }; game.modules.get(ID).api = api;
 });
 Hooks.on('getActorSheetHeaderButtons', (app, buttons) => { const actor = actorOf(app); if (!game.user.isGM || !actor || buttons.some(b => b.class === ID)) return; buttons.unshift({ label:'Token Studio', class:ID, icon:'fa-solid fa-crop-simple', onclick:() => open(actor, app.token).catch(fail) }); });
 Hooks.on('getHeaderControlsApplicationV2', (app, controls) => { const actor = actorOf(app); if (!game.user.isGM || !actor || controls.some(b => b.action === ID)) return; controls.unshift({ label:'Token Studio', action:ID, icon:'fa-solid fa-crop-simple', onClick:() => open(actor, app.token).catch(fail) }); });
-Hooks.on('getActorDirectoryEntryContext', (html, entries) => { entries.push({ name:'Token Studio', icon:'<i class="fa-solid fa-crop-simple"></i>', condition:() => game.user.isGM, callback:li => { const element = li instanceof HTMLElement ? li : li[0], id = element?.dataset?.documentId || element?.dataset?.entryId; open(game.actors.get(id)).catch(fail); } }); });
+// Foundry 13 replaced getActorDirectoryEntryContext with getActorContextOptions.
+Hooks.on('getActorContextOptions', (app, entries) => {
+  if (entries.some(entry => entry.name === 'Token Studio')) return;
+  function actorFromEntry(li) {
+    const element = li?.dataset ? li : li?.[0];
+    const id = element?.dataset?.entryId || element?.dataset?.documentId || element?.dataset?.actorId;
+    if (!id) return null;
+    return app.collection?.get(id) || game.actors.get(id);
+  }
+  entries.push({
+    name:'Token Studio', icon:'<i class="fa-solid fa-crop-simple"></i>',
+    condition:li => game.user.isGM && Boolean(actorFromEntry(li)?.canUserModify(game.user, 'update')),
+    callback:li => open(actorFromEntry(li)).catch(fail)
+  });
+});

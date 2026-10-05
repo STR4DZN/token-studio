@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.2 — 2026-10-05
+
+- Corrige a entrada Token Studio no menu de contexto dos atores: utiliza `getActorContextOptions`, evento público do Foundry 13, em vez do evento removido da versão 12.
+- Resolve o ator clicado pela coleção do aplicativo e respeita permissão de edição; evita entradas duplicadas.
+- Corrige a versão exposta pela API para acompanhar o módulo instalado.
+- Adiciona testes de abertura pelo menu e pelos cabeçalhos V1/V2. A execução em Foundry 13 + Lancer reais ainda requer validação.
+
 ## 0.2.1 — 2026-10-05
 
 - Prepara distribuição pelo GitHub com manifesto de instalação e ZIP fixado na tag `v0.2.1`.

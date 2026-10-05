@@ -4,7 +4,7 @@ const root=process.cwd(),dest=path.join(root,'release/token-studio');
 await rm(dest,{recursive:true,force:true});
 await mkdir(path.join(dest,'scripts'),{recursive:true});await mkdir(path.join(dest,'styles'),{recursive:true});
 await copyFile('foundry/module.json',path.join(dest,'module.json'));
-for(const file of ['foundry.js','transaction.js','sheet-adapter.js','native-validation.js'])await copyFile(`foundry/${file}`,path.join(dest,'scripts',file));
+for(const file of ['foundry.js','transaction.js','sheet-adapter.js','native-validation.js','stored-data.js'])await copyFile(`foundry/${file}`,path.join(dest,'scripts',file));
 await copyFile('src/compcon.js',path.join(dest,'scripts/compcon.js'));
 await copyFile('src/asset-path.js',path.join(dest,'scripts/asset-path.js'));
 for(const file of ['image-url.js','image-storage.js'])await copyFile(`src/${file}`,path.join(dest,'scripts',file));

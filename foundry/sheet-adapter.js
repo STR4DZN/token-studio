@@ -1,5 +1,6 @@
 import { copy, parsePilot, entries, validateSheet, pilotPortrait, shareCode } from "./compcon.js";
 import { isDefaultImage, syncPortraitProject } from './actor-images.js';
+import {storeData,readData} from './stored-data.js';
 const ID = "token-studio";
 const kinds = {
   skills: "skill",
@@ -370,7 +371,7 @@ export function toNativeItem(entry) {
     name: state.flavorName || d.name || state.id || type,
     type,
     system: cleanObject(system),
-    flags: { [ID]: { sheetKey: stable, packed: copy(state) } },
+    flags: { [ID]: { sheetKey: stable, packed: storeData(state) } },
   };
 }
 const normalizedItemKey = (e, native) => native.flags[ID].sheetKey;
@@ -1007,7 +1008,7 @@ export async function applySheetPlan({
           linked.source.code = patch['system.cloud_id'];
           linked.source.url = `https://compcon.app/link/pilot/${linked.source.code}/full/`;
         }
-        patch[`flags.${ID}.sheetProject`] = linked;
+        patch[`flags.${ID}.sheetProject`] = storeData(linked);
       }
       await doc.actor.update(patch);
     }
@@ -1049,7 +1050,7 @@ function packedDefinition(item) {
       Object.entries(v).map(([k, x]) => [k === "lid" ? "id" : k, rename(x)]),
     );
   }
-  const packed = item.getFlag?.(ID, "packed") || item.flags?.[ID]?.packed;
+  const packed = readData(item.getFlag?.(ID, "packed") || item.flags?.[ID]?.packed);
   return {
     ...(packed?.data || packed || {}),
     name: item.name,
@@ -1155,7 +1156,7 @@ function readNativeMech(actor, previous) {
 export function readNativePilot(actor, game) {
   permission(actor, game);
   const s = actor.system,
-    old = actor.getFlag?.(ID, "sheetProject")?.data;
+    old = readData(actor.getFlag?.(ID, "sheetProject"))?.data;
   const raw = old
     ? copy(old)
     : {

@@ -1,6 +1,6 @@
 {
   "name": "token-studio",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "test:sites": "node --test tests/sites-worker.test.mjs",
     "build:module": "vite build --config vite.module.config.mjs && node scripts/package-module.mjs",
-    "test": "node --test tests/engine.test.mjs tests/foundry-bootstrap.test.mjs tests/compcon.test.mjs tests/sheet-adapter.test.mjs tests/editor-controls.test.mjs tests/rules-images.test.mjs",
+    "test": "node --test tests/engine.test.mjs tests/foundry-bootstrap.test.mjs tests/compcon.test.mjs tests/sheet-adapter.test.mjs tests/editor-controls.test.mjs tests/rules-images.test.mjs tests/editor-entry.test.mjs tests/stored-data.test.mjs",
     "validate:release": "node scripts/validate-release.mjs",
     "release:assets": "npm run build:module && npm run validate:release && npm run test:module && python3 scripts/package-release.py",
     "test:module": "node --experimental-vm-modules --test tests/packaged-module.test.mjs tests/module-assets.test.mjs"

@@ -1,4 +1,16 @@
-# Validação — Token Studio 0.2.8
+# Validação — Token Studio 0.2.9
+
+## Correções e evidências na 0.2.9
+
+- As capturas atuais permitiram identificar o erro `Cannot use 'in' operator to search for 'id' in 1790477053906`. O mesmo valor aparece em `_ts["reserves.reserve_license"]`, seguido de `_ts["reserves.reserve_license.id"]`, no compartilhamento público da Agnes. O armazenamento do objeto bruto nos flags conflita com a expansão recursiva de chaves pontuadas do Foundry.
+- A regressão reproduz a mensagem exata com expansão de caminhos e confirma aplicação/reaplicação com armazenamento opaco, preservação de metadados e leitura de flags antigos. Não é uma execução do servidor Foundry.
+- Replay local com a ficha pública completa: 6 atores, 72 itens, nome Agnes, callsign Fragmentada, URL original do retrato, 5 mechas reabertos, mecha favorito vinculado e timestamps intactos. O replay usa documentos simulados com expansão recursiva, não o runtime Lancer.
+- No navegador: seletor de arte, importação real de arquivo PNG, URL pública do GitHub e moldura Benjosity blue. Aplicação conjunta exportou retrato retangular sem borda para `actor.img` e token azul circular para `prototypeToken.texture.src` em um ator de teste.
+- O retrato COMP/CON observado continua acessível apenas para visualização neste navegador por CORS. A aplicação da ficha usa diretamente sua URL; edição/exportação precisa de origem que permita leitura de pixels.
+- A falha de função ausente nos comandos do editor foi corrigida e uma análise de escopo verifica referências sem importação. Testes anteriores e empacotamento continuam obrigatórios.
+- 97 testes passaram: 88 de domínio/bootstrap/escopo, 5 do módulo compilado e suas rotas de assets, e 4 da prévia Sites.
+- Não há acesso ao mundo afetado. Abrir e aplicar a ficha no Foundry 13 + versão instalada do Lancer, bem como recuperar os ajustes legados do ator, ainda requer validação no ambiente real. Não foi necessário apagar/recriar ator.
+
 
 ## Correções na 0.2.8
 

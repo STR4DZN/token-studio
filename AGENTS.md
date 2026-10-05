@@ -4,7 +4,7 @@
 
 - User selected visual option 1: charcoal interface, lavender accent, large editor left, settings and two previews right.
 - Token Studio is an independent Foundry 13 editor; never introduce a Tokenizer dependency.
-- Importing a COMP/CON sheet must link the pilot to the Foundry actor, including its portrait, share code and sync date. The portrait and token keep independent artwork/settings; preserve customized tokens.
+- Importing a COMP/CON sheet must link the pilot to the Foundry actor, including its portrait, share code and sync date. Choosing new artwork prepares portrait and token together by default, with separate crops and no portrait border. The advanced option can replace only the active artwork; COMP/CON sync preserves customized tokens.
 - Mouse wheel zooms the active image without scrolling the window; favorite frames appear first and as initial shortcuts. Sheet navigation follows COMP/CON narrative/tactical/hangar contexts, with separate pilot/mech actions and selected loadouts.
 - Rules are grouped by their real source (weapon/system/talent/frame), with separate actions/passives/effects, filters and visible diagnostics; preserve unclassified fields. COMP/CON portraits and pasted public images use validated HTTPS URLs without automatic local copies. Reuse identical stored images by content hash, and mount long rules only when opened.
 - Sheet choices must keep a readable fixed minimum height and scroll independently in short Foundry windows. Validate full native actors/loadout references before import, and prepare the native sheet after application with rollback on failure. COMP/CON V3 license stubs/custom trigger text must remain visible. Existing remote actor images without access flags must display when CORS blocks editing.

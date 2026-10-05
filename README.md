@@ -28,14 +28,14 @@ Abra Token Studio no ator piloto → **Ficha do mestre** → importe o link/cód
 
 ## Usar
 
-- Escolha **Retrato** ou **Token**. Cada um tem imagem e enquadramento próprios.
+- Escolha uma arte uma vez. Ela prepara o retrato sem borda e o token com sua moldura. **Retrato** e **Token** continuam com enquadramentos separados.
 - Importe uma imagem por **Trocar imagem**, arraste um arquivo para a janela ou cole uma imagem. No Foundry, Trocar imagem abre o seletor de arquivos; arquivos locais também podem ser arrastados/colados.
 - **Usar URL** valida uma imagem HTTPS pública e mostra sua prévia antes de usar. Links Google com `imgurl` e páginas acessíveis com imagem de prévia são resolvidos; links de busca, pins ou mensagens podem exigir o endereço direto da imagem.
 - Arraste a arte para posicionar e role a roda do mouse sobre ela para aumentar ou diminuir o zoom. O gesto entra no desfazer e mantém os ajustes de retrato/token independentes. O zoom mantém a proporção. As setas do teclado também movem a arte; Shift aumenta o passo.
 - **Preencher** limita o movimento para evitar espaços vazios. **Mostrar inteira** começa mostrando a imagem completa. **Livre** permite deslocar e reduzir sem limites de preenchimento.
 - **Importar borda**, ao lado do título Moldura, aceita PNG/WebP com transparência. A abertura central fechada é detectada automaticamente. Bordas abertas podem ser ajustadas manualmente em Avançado.
 - O painel **Avançado** contém rotação, formato do retrato, recorte, opacidade, área interna, presets, histórico e importação/exportação do projeto. **Usar imagem do retrato/token** reutiliza a origem sem copiar o enquadramento.
-- **Aplicar** permite escolher retrato da ficha, token padrão e/ou tokens selecionados desse personagem na cena atual. Esses destinos não são marcados juntos automaticamente.
+- **Aplicar** permite escolher retrato da ficha, token padrão e/ou tokens selecionados desse personagem na cena atual. Retrato e token padrão começam selecionados juntos; desmarque um se quiser aplicar só o outro. Em Avançado, desmarque **Usar nova imagem na ficha e no token** para trocar somente a origem em edição.
 - Na prévia fora do Foundry, Aplicar gera arquivos PNG/WebP e mostra links explícitos para baixá-los. Projeto exportado é um JSON que inclui os originais.
 
 ## Molduras do seu pacote

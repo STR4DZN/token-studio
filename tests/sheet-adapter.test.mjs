@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {createProject} from '../src/engine.js';
 import {createSheet,copy,setPath,entries}from'../src/compcon.js';
 import {prepareSheetPlan,applySheetPlan,readNativePilot,toNativeItem,plannedActorData}from'../foundry/sheet-adapter.js';
+import {readData} from '../foundry/stored-data.js';
+import {expandUpdate} from './helpers/expand-update.mjs';
 import {sheetDiagnostics}from'../src/sheet-rules.js';
 const raw=()=>({itemType:'pilot',id:'p',name:'Novo',callsign:'N',level:3,mechSkills:[2,1,0,0],skills:[{id:'s',rank:2,data:{id:'s',name:'Skill',description:'<p>Texto</p>'}}],talents:[],mechs:[],loadouts:[{name:'A',armor:[],weapons:[{id:'w',instanceId:'weapon-1',data:{id:'w',name:'Arma',damage:[{type:'Kinetic',val:3}],range:[{type:'Range',val:5}]}}],gear:[]}],active_index:0,stats:{current:{hp:9},max:{hp:30}},notes:'Notas'});
 class FakeActor{
@@ -133,4 +135,23 @@ test('mecha favorito fica ativo no piloto e falha final restaura esse vínculo',
  await applySheetPlan({plan,sheet,game,createActor:async config=>new FakeActor({...config,id:'mech'+(++next)})});assert.equal(actor.system.active_mech,'Actor.mech2');
  const second=new FakeActor(),before=second.toObject(),secondGame=gameFor([second]),secondPlan=await prepareSheetPlan({actor:second,sheet,parts:{...parts,mechs:true},game:secondGame}),created=[];
  await assert.rejects(()=>applySheetPlan({plan:secondPlan,sheet,game:secondGame,createActor:async config=>{const a=new FakeActor({...config,id:'new'+created.length});created.push(a);return a;},verifyActor:async a=>{if(a===created[1])throw Error('ficha do mecha');}}),/restaurados/);assert.deepEqual(second.toObject(),before);assert.ok(created.every(a=>a.deleted));
+});
+
+
+test('aplicação completa suporta datas conflitantes e reabre os dados COMP/CON intactos',async()=>{
+ const data=raw();data.img={cloud_portrait:'https://img.test/pilot.png'};
+ data._ts={'reserves.reserve_license':1790477053906,'reserves.reserve_license.id':1791228367601};data.cloud={_ts:copy(data._ts)};
+ data.skills[0].data.custom={'literal.key':1,'literal.key.child':2};
+ const actor=new FakeActor(),sheet=createSheet(data,{code:'UT2DH7J9M6ZM'});
+ const update=actor.update.bind(actor);actor.update=async patch=>{expandUpdate(patch);return update(patch);};
+ const create=actor.createEmbeddedDocuments.bind(actor);actor.createEmbeddedDocuments=async(...args)=>{expandUpdate(args[1]);return create(...args);};
+ const plan=await prepare(actor,sheet,{portrait:true});assert.equal(plan.blocked,false);
+ await applySheetPlan({plan,sheet,game:gameFor([actor]),resolvePortrait:async()=>data.img.cloud_portrait});
+ assert.equal(actor.name,data.name);assert.equal(actor.img,data.img.cloud_portrait);assert.equal(actor.system.callsign,data.callsign);
+ const saved=readData(actor.flags['token-studio'].sheetProject);
+ assert.deepEqual(saved.data._ts,data._ts);assert.deepEqual(saved.base.cloud,data.cloud);
+ const reopened=readNativePilot(actor,gameFor([actor]));assert.deepEqual(reopened._ts,data._ts);assert.deepEqual(reopened.cloud,data.cloud);
+ const again=await prepare(actor,saved,{portrait:true});assert.equal(again.blocked,false);
+ await applySheetPlan({plan:again,sheet:saved,game:gameFor([actor]),resolvePortrait:async()=>data.img.cloud_portrait});
+ assert.deepEqual(readData(actor.flags['token-studio'].sheetProject).data._ts,data._ts);
 });

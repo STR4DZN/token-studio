@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.9 — Arte única e aplicação COMP/CON
+
+- Corrige a importação ausente de `loadResources`, que quebrava arquivo, URL, moldura e projeto.
+- Uma escolha de arte prepara retrato e token juntos: retrato sem borda e token com sua moldura, com enquadramentos separados. A opção avançada permite trocar só a edição atual.
+- Aplicar começa com retrato e token padrão selecionados. URLs apenas para visualização não impedem aplicar o outro destino editável.
+- Guarda metadados COMP/CON com chaves literais contendo pontos em JSON opaco ao Foundry; evita o conflito entre uma data e seus campos filhos, preservando todos os dados e a leitura de projetos antigos.
+- Adiciona regressões para o erro real `Cannot use 'in' operator ... 'id' in 1790477053906`, aplicação e reabertura da ficha, e funções sem importação no editor.
+
+
 ## 0.2.8 — 2026-10-05
 
 - O menu de escolhas mantém opções com altura mínima de 40 px e rolagem independente em janelas curtas, sem comprimir o texto.

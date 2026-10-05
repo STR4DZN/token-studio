@@ -77,3 +77,7 @@ O seletor **Unidade** permanece no topo. **Loadout do piloto** mostra apenas o l
 Ações e efeitos usa cartões por instância/origem, com ações, passivas, efeitos e descrições separados. Contagens refletem os filtros; somente o piloto ou mecha escolhido e seus ranks/loadouts ativos aparecem por padrão. Ative Mostrar inativas para consultar reserva e ranks não adquiridos. Mods, profiles, traits e core system preservam seus caminhos reais. Conteúdo longo só é montado ao abrir o cartão/regra.
 
 `None` significa sem custo de ação e aparece entre passivas; passivas com frequência limitada ainda têm registro de uso manual. O painel não automatiza seu gatilho. Pendências mostra a unidade, origem e caminho de referências ausentes, listas malformadas ou campos extras sem classificação. Todos os campos originais continuam disponíveis em Dados completos; uma descrição de rank não é automaticamente convertida em efeito nativo.
+
+## Compatibilidade dos metadados de sincronização
+
+Na 0.2.9, os metadados com nomes literais contendo pontos são preservados em JSON nos flags do módulo. Isso impede que o Foundry interprete uma data de sincronização como objeto e interrompa a aplicação. O editor decodifica esse armazenamento ao reabrir; projetos antigos permanecem legíveis.

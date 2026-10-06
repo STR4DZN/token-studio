@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.10 — 2026-10-06
+
+- Abrir um ator existente preserva a textura do token, mesmo quando ela é igual ao retrato; não acrescenta uma segunda moldura.
+- Novos retratos começam em Mostrar inteira, numa área quadrada. A aplicação acomoda também retratos antigos verticais em PNG quadrado, evitando o recorte adicional da ficha Lancer.
+- Selecionar uma moldura integrada sobre um token existente restaura sua abertura interna, sem deixar a arte alcançar a borda externa.
+- Anéis nativos recebem uma variante circular com margem transparente nos dois terços centrais e escala do subject normalizada. Tokens sem anel recebem a variante comum; moldura própria desliga o anel nos destinos escolhidos.
+- Abrir pela ficha de um token inclui esse token da cena atual na aplicação, mesmo sem seleção no mapa. Os destinos disponíveis começam marcados; escalas da textura e demais dados do token são preservados.
+- A restauração após falha inclui a escala anterior do subject. Verificações automatizadas e de pixels no navegador; Foundry/Lancer reais permanecem pendentes.
+
 ## 0.2.9 — Arte única e aplicação COMP/CON
 
 - Corrige a importação ausente de `loadResources`, que quebrava arquivo, URL, moldura e projeto.

@@ -1,4 +1,24 @@
-import {createView, clone} from './engine.js';
+import {createView, createProject, validateProject, clone} from './engine.js';
+
+export function builtinFramePatch(view,frame) {
+  return {frame,mask:'circle',shape:frame==='none'?view.shape:'circle',
+    ...(frame!=='none'&&['none','custom'].includes(view.frame)?{aperture:createView('').aperture}:{})};
+}
+
+export function initializeArtwork(host) {
+  const next=host.project?clone(validateProject(host.project)):createProject(host.source);
+  if (!host.project && host.tokenSource) {
+    // A native token texture is already a composed image. Opening it must not
+    // wrap it in another silver frame, even when it equals the portrait path.
+    next.views.token={...createView(host.tokenSource),frame:'none',shape:'rectangle',aperture:1,fit:'contain'};
+  }
+  if(host.nativeRing && next.views.token.frame==='none') {
+    next.views.token.shape='circle';next.views.token.aperture=1;
+  }
+  for(const key of ['portrait','token'])next.views[key].animated=/\.gif(?:[?#]|$)/i.test(next.views[key].src);
+  if(host.portraitEditable===false){next.views.portrait.displayOnly=true;if(!host.tokenSource)next.views.token.displayOnly=true;}
+  return next;
+}
 
 export function replaceArtwork(project, source, {both=true, animated=false}={}) {
   const next=clone(project);

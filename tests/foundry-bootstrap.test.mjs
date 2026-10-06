@@ -107,3 +107,27 @@ test('validação nativa recusa retorno falso e prepara dados/template pela API 
   await assert.rejects(()=>verifyNativeSheet({validate:()=>true,sheet:{getData:async()=>{throw Error('loadout inválido');}}}),/loadout inválido/);
  } finally {CONFIG.Actor.documentClass=previous;foundry.applications.handlebars=handlebars;}
 });
+
+test('ator existente entrega textura pronta mesmo quando é igual ao retrato',async()=>{
+ const clicked={...actor,id:'same-image',uuid:'Actor.same-image',img:'same.png',getFlag:()=>null,prototypeToken:{texture:{src:'same.png'}}};
+ const app=await module.api.open(clicked);app._replaceHTML({}, {replaceChildren(){}});const host=mounted.at(-1);
+ assert.equal(host.source,'/vtt/same.png');assert.equal(host.tokenSource,'/vtt/same.png');assert.equal(host.nativeRing,false);
+});
+
+test('editar token da ficha usa subject nativo e inclui somente esse token na cena',async()=>{
+ const saved={apps:foundry.applications.apps,settings:game.settings.get,ui:globalThis.ui,canvas:globalThis.canvas};
+ try{
+  const calls=[],files=[];game.settings.get=(_,key)=>key==='outputFolder'?'token-studio':[];globalThis.ui={notifications:{info(){}}};
+  const scene={id:'native-scene',updateEmbeddedDocuments:async(type,patches)=>{calls.push(patches);}};globalThis.canvas={scene,tokens:{controlled:[]}};
+  foundry.applications.apps={FilePicker:{implementation:{browse:async()=>({files}),upload:async(_,folder,file)=>{const path=folder+'/'+file.name;files.push(path);return{path};}}}};
+  const clicked={...actor,id:'native-actor',uuid:'Actor.native-actor',name:'Native',img:'portrait.png',prototypeToken:{texture:{src:'prototype.png',scaleX:1.6,scaleY:.8},ring:{enabled:true,subject:{texture:'old-prototype-subject.png',scale:2}}},flags:{},getFlag(ns,key){return this.flags[ns]?.[key];},async update(patch){for(const[k,v]of Object.entries(patch))if(k.includes('.'))setPath(this,k.split('.'),v);else this[k]=structuredClone(v);}};
+  const token={documentName:'Token',id:'t',actorId:clicked.id,parent:scene,texture:{src:'scene.png'},ring:{enabled:true,subject:{texture:'actual-subject.png',scale:2.4}},canUserModify:()=>true};
+  const app=await module.api.open(clicked,token);app._replaceHTML({}, {replaceChildren(){}});const host=mounted.at(-1);
+  assert.equal(host.tokenSource,'/vtt/actual-subject.png');assert.equal(host.nativeRing,true);assert.equal(host.getSceneCount(),1);
+  const {createProject}=await import('../src/engine.js');const project=createProject('https://img.test/original.png');project.views.token.frame='none';
+  const exports=[];await host.apply({project,destinations:{prototype:true,scene:true},exportView:async(key,options)=>{exports.push({key,options});return new Blob([options?.nativeRing?'native-image':'plain-image'],{type:'image/png'});}});
+  assert.deepEqual(exports,[{key:'token',options:undefined},{key:'token',options:{nativeRing:true}}]);
+  assert.equal(clicked.prototypeToken.ring.subject.scale,1);assert.equal(clicked.prototypeToken.texture.scaleX,1.6);assert.equal(clicked.prototypeToken.texture.scaleY,.8);
+  assert.equal(calls.length,1);assert.equal(calls[0].length,1);assert.equal(calls[0][0]._id,'t');assert.equal(calls[0][0]['ring.subject.scale'],1);assert.equal(calls[0][0]['ring.subject.texture'],clicked.prototypeToken.ring.subject.texture);assert.equal(clicked.img,'portrait.png');
+ }finally{foundry.applications.apps=saved.apps;game.settings.get=saved.settings;globalThis.ui=saved.ui;globalThis.canvas=saved.canvas;}
+});

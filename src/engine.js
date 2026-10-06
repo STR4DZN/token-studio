@@ -3,7 +3,7 @@ import { assetPath } from './asset-path.js';
 export const SCHEMA = 1;
 export const clone = value => structuredClone(value);
 export function createView(src, token = true) {
-  return { src, fit: 'cover', zoom: 1, x: 0, y: 0, rotation: 0, aspect: token ? '1:1' : '2:3', frame: token ? 'silver' : 'none', frameSrc: '', color: '#b5a2fa', background: 'transparent', backgroundColor: '#25242d', aperture: .82, opacity: 1, shape: token ? 'circle' : 'rectangle', mask: 'circle', animated: false };
+  return { src, fit: token ? 'cover' : 'contain', zoom: 1, x: 0, y: 0, rotation: 0, aspect: '1:1', frame: token ? 'silver' : 'none', frameSrc: '', color: '#b5a2fa', background: 'transparent', backgroundColor: '#25242d', aperture: .82, opacity: 1, shape: token ? 'circle' : 'rectangle', mask: 'circle', animated: false };
 }
 export function createProject(src) {
   return { schema: SCHEMA, active: 'token', views: { token: createView(src), portrait: createView(src, false) }, updatedAt: Date.now() };
@@ -156,13 +156,29 @@ export function renderStage(canvas, view, resources, size, dpr = 1) {
   clipPath(ctx, view, size.width, size.height); ctx.stroke(); ctx.restore();
   return { left, top, scale };
 }
-export async function exportView(view, assetsBase, size = 1024, format = 'image/png') {
+export function prepareOutputCanvas(canvas, size, {square=false,nativeRing=false}={}) {
+  if (!nativeRing && (!square || canvas.width===canvas.height)) return canvas;
+  const result=createCanvas(size,size),ctx=result.getContext('2d');
+  const bounds=size*(nativeRing?2/3:1),scale=Math.min(bounds/canvas.width,bounds/canvas.height);
+  const width=canvas.width*scale,height=canvas.height*scale;
+  ctx.save();
+  // Dynamic rings draw the subject over the ring. Keep all subject pixels
+  // inside the central two thirds, including when editing a legacy rectangle.
+  if(nativeRing){ctx.beginPath();ctx.arc(size/2,size/2,bounds/2,0,Math.PI*2);ctx.clip();}
+  ctx.drawImage(canvas,(size-width)/2,(size-height)/2,width,height);
+  ctx.restore();return result;
+}
+export function renderView(view,resources,size=1024,options={}) {
+  const dimensions=outputSize(view,size),canvas=createCanvas(dimensions.width,dimensions.height);
+  renderOutput(canvas,view,resources);
+  return prepareOutputCanvas(canvas,size,options);
+}
+export async function exportView(view, assetsBase, size = 1024, format = 'image/png', options={}) {
   const resources = await loadResources(view, assetsBase);
   if (!resources.image) throw new Error('Escolha uma imagem antes de exportar.');
-  const dimensions = outputSize(view, size), canvas = createCanvas(dimensions.width, dimensions.height);
-  renderOutput(canvas, view, resources);
+  const output=renderView(view,resources,size,options);
   try {
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, format, .94));
+    const blob = await new Promise(resolve => output.toBlob(resolve, format, .94));
     if (!blob) throw new Error('Falha ao exportar a imagem.');
     return blob;
   } catch (error) { if (error.name === 'SecurityError') throw new Error('O endereço externo bloqueou a exportação. Importe o arquivo pelo computador.'); throw error; }

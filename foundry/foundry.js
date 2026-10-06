@@ -65,7 +65,7 @@ async function storePortrait(actor, source) {
   const result=await validateImageURL(source,{allowDisplayOnly:true});
   return {url:result.url,editable:result.editable};
 }
-function selectedTokens(actor) { return (canvas.tokens?.controlled || []).filter(t => t.document.actorId === (actor.parent ? actor.parent.actorId : actor.id)).map(t => t.document); }
+function selectedTokens(actor,context=null) { const documents=(canvas.tokens?.controlled||[]).map(t=>t.document);const token=context?.document||context||actor.parent;if(token?.documentName==='Token'&&token.parent?.id===canvas.scene?.id&&!documents.some(d=>d.id===token.id))documents.push(token);return documents.filter(d=>d.actorId===(actor.parent?actor.parent.actorId:actor.id)); }
 async function open(actor, token = null, mode = 'images') {
   if (!game.user.isGM) throw new Error('O Token Studio está disponível para o mestre.');
   if (!actor || actor.documentName !== 'Actor') throw new Error('Escolha um personagem para abrir o editor.');
@@ -91,20 +91,22 @@ Hooks.once('init', () => {
       const actor = this.actor;
       const project = actor.getFlag(ID, 'project');
       const source = actorSource(actor);
-      const tokenSource=isDefaultImage(actor.prototypeToken.texture.src)?null:imageRoute(actor.prototypeToken.texture.src);
+      const editingToken=this.token?.document||this.token||actor.parent||actor.prototypeToken;
+      const tokenArtwork=editingToken.ring?.enabled&&editingToken.ring.subject?.texture?editingToken.ring.subject.texture:editingToken.texture.src;
+      const tokenSource=isDefaultImage(tokenArtwork)?null:imageRoute(tokenArtwork);
       this._unmount = mountEditor(result, {
         isFoundry:true,portraitEditable:actor.getFlag(ID,'portraitSource')?.editable, initialMode:this.initialMode,actorUuid:actor.uuid,sheetProject:readData(actor.getFlag(ID,'sheetProject')),shareLink:actor.system?.cloud_id?.length===12?`https://compcon.app/link/pilot/${actor.system.cloud_id}/full/`:undefined,
         readActorSheet:()=>readNativePilot(actor,game),openItem:async uuid=>(await fromUuid(uuid))?.sheet?.render(true),
         prepareSheetApply:(sheet,parts)=>prepareSheetPlan({actor,sheet,parts,game,validateActor:validateNativeActor,validateItem:async(data,parent)=>{const candidate=new CONFIG.Item.documentClass(data,{parent});validateNativeDocument(candidate);}}),
         applySheet:async(plan,sheet)=>{const result=await applySheetPlan({plan,sheet,game,verifyActor:verifyNativeSheet,resolvePortrait:storePortrait,createActor:data=>CONFIG.Actor.documentClass.create(data),saveBackup:async snapshots=>{plan.backupPath=await upload(actor,new Blob([JSON.stringify({schema:'token-studio-foundry-backup-1',createdAt:Date.now(),world:game.world.id,documents:snapshots},null,2)],{type:'application/json'}),'backups');}});ui.notifications.info(`Token Studio: ficha aplicada. Backup: ${plan.backupPath}`);return {...result,name:actor.name,source:actorSource(actor),tokenSource:isDefaultImage(actor.prototypeToken.texture.src)?null:imageRoute(actor.prototypeToken.texture.src),shareLink:actor.system.cloud_id?`https://compcon.app/link/pilot/${actor.system.cloud_id}/full/`:'',sheetProject:readData(actor.getFlag(ID,'sheetProject')),imageUpdate:result.portrait?{id:foundry.utils.randomID(),source:imageRoute(result.portrait),editable:result.portraitEditable}:null};},
         assetsBase:assetPath(route(`modules/${ID}/assets`)), name:actor.name, type:({pilot:'Piloto',mech:'Mech',npc:'NPC',deployable:'Deployable'})[actor.type] || actor.type,
-        key:`${game.world.id}:${actor.uuid}:${game.user.id}`, source, project, tokenSource:tokenSource && !tokenSource.includes('mystery-man') && tokenSource!==actor.img ? tokenSource:null, sceneCount:selectedTokens(actor).length,getSceneCount:()=>selectedTokens(actor).length,
+        key:`${game.world.id}:${actor.uuid}:${game.user.id}`, source, project, tokenSource,nativeRing:Boolean(editingToken.ring?.enabled), sceneCount:selectedTokens(actor,this.token).length,getSceneCount:()=>selectedTokens(actor,this.token).length,
         presets:game.settings.get(ID, 'presets'), savePresets:items => game.settings.set(ID, 'presets', items),
         importFile:(file,kind) => upload(actor,file,kind), onClose:() => this.close(),
         pickImage:() => new Promise(resolve => { const FilePicker = picker(); let settled = false; const finish = value => { if (settled) return; settled = true; resolve(value); }; const app = new FilePicker({ type:'image', current:actor.img, callback:path => finish(path) }); app.addEventListener('close', () => finish(null), { once:true }); app.render(true); }),
         apply:async ({ project, destinations, format, exportView }) => {
           if (!game.user.isGM || !actor.canUserModify(game.user, 'update')) throw new Error('Sem permissão para atualizar o personagem.');
-          const tokens = destinations.scene ? selectedTokens(actor) : [];
+          const tokens = destinations.scene ? selectedTokens(actor,this.token) : [];
           if (destinations.scene && (!tokens.length || !canvas.scene)) throw new Error('Selecione ao menos um token deste personagem na cena atual.');
           if (tokens.some(t => !t.canUserModify(game.user, 'update'))) throw new Error('Sem permissão para atualizar um dos tokens selecionados.');
           if (destinations.prototype && actor.prototypeToken.randomImg) throw new Error('Este personagem usa imagens aleatórias. A aplicação no token padrão foi interrompida para preservar o wildcard. Exporte uma variante ou escolha apenas os tokens da cena.');
@@ -113,6 +115,7 @@ Hooks.once('init', () => {
           const outputs = {};
           if (destinations.portrait && !destinations.originalAnimation) outputs.portrait = await exportView('portrait');
           if (destinations.prototype || destinations.scene) outputs.token = await exportView('token');
+          if(project.views.token.frame==='none'&&((destinations.prototype&&actor.prototypeToken.ring?.enabled)||tokens.some(t=>t.ring?.enabled)))outputs.nativeToken=await exportView('token',{nativeRing:true});
           for (const [key, blob] of Object.entries(outputs)) paths[key] = await upload(actor, blob, key === 'portrait' ? 'portraits' : 'tokens');
           if (destinations.portrait && destinations.originalAnimation) paths.portrait = saved.views.portrait.src;
           saved.updatedAt = Date.now();

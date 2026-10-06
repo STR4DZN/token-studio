@@ -1,4 +1,13 @@
-# Validação — Token Studio 0.2.9
+# Validação — Token Studio 0.2.10
+
+## Correções e evidências na 0.2.10
+
+- Os casos de abertura com retrato/token iguais, textura explícita do subject e token de contexto sem seleção foram cobertos no bootstrap. A aplicação escolhe variantes distintas para anéis nativos e tokens estáticos, sem mudar as escalas da textura.
+- No navegador, o editor real exportou retrato vertical com marcadores no alto e no rodapé. Ambos permaneceram na área de 100 × 100 com `object-fit: cover`, tanto no projeto novo quanto em um projeto legado 2:3.
+- O token já composto abriu sem segunda moldura. A variante nativa passou pela leitura dos pixels: nenhum pixel opaco além do círculo central de diâmetro 2/3. Ficha, token padrão e token atual receberam os destinos corretos em documentos simulados.
+- O código oficial do Lancer usa 100 × 100 e `object-fit: cover` em `src/styles/components/_elements.scss`. A preparação do subject segue https://foundryvtt.com/article/dynamic-token-rings/ (padding dos dois terços centrais, arte sem moldura).
+- 105 testes passaram: 96 de domínio/bootstrap, cinco do pacote e quatro da prévia. Escolher uma moldura integrada a partir de token existente também restaura sua abertura interna, evitando arte até a borda externa.
+- Esta verificação usa Chrome, imagens sintéticas e documentos simulados; não executa a renderização PIXI do Foundry nem a ficha nativa real. O mundo afetado continua indisponível.
 
 ## Correções e evidências na 0.2.9
 

@@ -113,3 +113,9 @@ APIs oficiais usadas como referência: ApplicationV2, FilePicker, controles de c
 ## Licenças e materiais
 
 A licença MIT do projeto se aplica ao código próprio. Licenças das bibliotecas estão em `licenses/`; as artes de moldura fornecidas pelo usuário mantêm seus nomes/coleções em `assets/frames/credits.json` e não recebem automaticamente a licença do código.
+
+### Edição de atores existentes
+
+Abrir o editor mantém a imagem já composta do token. Retratos novos começam em **Mostrar inteira**; a aplicação adapta o retrato à área quadrada da ficha Lancer. Em projetos antigos, o enquadramento escolhido é preservado e recebe margem transparente na exportação. Se um recorte já estiver salvo no projeto, ajuste o retrato em **Mostrar inteira** e **Centralizar** para reenquadrar a imagem original.
+
+Sem moldura própria, anéis dinâmicos recebem uma imagem preparada para seu interior. Escolher uma moldura do módulo substitui o anel nos destinos aplicados. Ao abrir pela ficha de um token, esse token da cena atual também aparece entre os destinos.

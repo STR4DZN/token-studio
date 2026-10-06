@@ -7,8 +7,9 @@ export function Suite({ host = {} }) {
     [sheetVisited, setSheetVisited] = useState(host.initialMode === "sheet"),
     [actorState,setActorState] = useState({});
   const boundHost = {...host,...actorState};
+  function imagesApplied(result){setActorState(current=>({...current,...result}));host.onImagesApplied?.(result);}
   function sheetApplied(result) {
-    setActorState(current=>({...current,...result}));
+    setActorState(current=>({...current,...result,appliedPortrait:null}));
     host.onSheetApplied?.(result);
   }
   useEffect(() => {
@@ -46,7 +47,7 @@ export function Suite({ host = {} }) {
         </span>
       </nav>
       {imageVisited && <div className="ts-suite-pane" hidden={mode !== "images"}>
-        <App host={{...boundHost,visible:mode==='images'}} />
+        <App host={{...boundHost,visible:mode==='images',onImagesApplied:imagesApplied}} />
       </div>}
       {sheetVisited && (
         <div className="ts-suite-pane" hidden={mode !== "sheet"}>

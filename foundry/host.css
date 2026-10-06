@@ -1,4 +1,4 @@
-.token-studio-window { min-width:780px; min-height:720px; }
+.token-studio-window { min-width:780px; min-height:600px; }
 .token-studio-window .window-content { padding:0; overflow:hidden; background:#202126; }
 .token-studio-window .ts-mount { height:100%; width:100%; overflow:auto; }
 .token-studio-window .window-header { background:#202126; }

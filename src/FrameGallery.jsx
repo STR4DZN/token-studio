@@ -2,7 +2,8 @@ import React, { useMemo, useState } from "react";
 import catalog from "./frame-catalog.json";
 import {frameChoices,readFavorites} from './editor-controls.js';
 import { assetPath } from './asset-path.js';
-export function FrameGallery({ assetsBase, onChoose, onClose, busy }) {
+export function FrameGallery({ assetsBase, onChoose, onClose, busy, currentSrc }) {
+  const [selected,setSelected]=useState(()=>catalog.find(f=>currentSrc===assetPath(assetsBase,f.file))||null);
   const [query, setQuery] = useState(""),
     [author, setAuthor] = useState(""),
     [page, setPage] = useState(0),
@@ -44,7 +45,7 @@ export function FrameGallery({ assetsBase, onChoose, onClose, busy }) {
         <h2 id="ts-dialog-title">Suas molduras</h2>
         <p>
           {catalog.filter((f) => f.kind === "frame").length} molduras do pacote.
-          Favoritas aparecem primeiro. O original só é carregado quando você escolhe.
+          Favoritas aparecem primeiro. Selecione uma moldura e confirme. O original é carregado ao confirmar.
         </p>
         <div className="ts-gallery-filters">
           <input
@@ -82,12 +83,13 @@ export function FrameGallery({ assetsBase, onChoose, onClose, busy }) {
         </div>
         <div className="ts-gallery-grid">
           {items.slice(current * 24, current * 24 + 24).map((f) => (
-            <article key={f.id}>
+            <article key={f.id} className={selected?.id===f.id?'ts-frame-selected':''}>
               <button
                 className="ts-gallery-choice"
-                aria-label={`Usar moldura ${f.author} ${f.name}`}
+                aria-pressed={selected?.id===f.id}
+                aria-label={`Selecionar moldura ${f.author} ${f.name}`}
                 disabled={busy}
-                onClick={() => onChoose(f)}
+                onClick={() => setSelected(f)}
               >
                 <img
                   src={assetPath(assetsBase, f.thumb)}
@@ -96,7 +98,7 @@ export function FrameGallery({ assetsBase, onChoose, onClose, busy }) {
                   width="100"
                   height="100"
                 />
-                <strong>{f.name}</strong>
+                <strong>{selected?.id===f.id&&<i className="fa-solid fa-circle-check" aria-hidden="true"/>} {f.name}</strong>
                 <small>
                   {f.author} • {f.width} px
                 </small>
@@ -119,7 +121,7 @@ export function FrameGallery({ assetsBase, onChoose, onClose, busy }) {
             Nenhuma moldura encontrada. Ajuste a busca.
           </p>
         )}
-        <footer className="ts-gallery-footer">
+        <div className="ts-gallery-selection"><span>{selected?<><strong>{selected.author} • {selected.name}</strong><small>Seleção pronta para aplicar ao enquadramento atual.</small></>:'Selecione uma moldura para continuar.'}</span><button className="ts-button ts-primary" disabled={busy||!selected} onClick={()=>onChoose(selected)}>{busy?'Carregando…':'Usar esta moldura'}</button></div><footer className="ts-gallery-footer">
           <small>
             {items.length} resultados • página {current + 1} de {pages}
           </small>

@@ -1,3 +1,16 @@
+# Validação — Token Studio 0.3.0
+
+## Validação da 0.3.0
+
+- 100 testes de domínio/bootstrap passaram. Incluem destinos mistos de anel/estático, migração de projetos antigos, margem do palco, tokens vinculados não selecionados e janelas de contexto independentes.
+- 334 verificações de imagem no Chrome passaram. `tests/browser-regressions.html` usa originais de 330 molduras: cada imagem é decodificada, composta e comparada pixel a pixel ao palco nos pixels opacos. Casos adicionais cobrem clipping circular, retratos altos/largos, sujeito nativo nos dois terços e reabertura sem repetir padding.
+- Fluxos no editor real: escolher/favoritar/confirmar moldura; favoritas primeiro ao reabrir; marcar/desmarcar destinos sob CSS host adversarial; aplicar retrato e token em campos distintos de documentos simulados; roda de zoom de 100% para 130% e desfazer; alternar retrato/token sem copiar transforms.
+- Ficha real montada com dados COMP/CON: editar nome, desfazer, selecionar Eco Sepulcral, filtrar Armas (4 origens / 4 regras), campos de filtros com 42–45 px, navegação/conteúdo com rolagem independente e rodapé acessível a 680 px. Sem overflow horizontal.
+- Builds de prévia/módulo e testes do pacote executados. O ensaio usa API e documentos simulados; nenhum mundo Foundry nativo estava disponível. O manifesto continua sem compatibilidade declarada como verified.
+- Pesquisa: documentação oficial de anéis V13, https://foundryvtt.com/article/dynamic-token-rings/ ; histórico de CSS/atualização de cena do Tokenizer, https://github.com/MrPrimate/tokenizer/blob/master/CHANGELOG.md . A implementação permanece independente.
+
+## Histórico de evidências
+
 # Validação — Token Studio 0.2.10
 
 ## Correções e evidências na 0.2.10
@@ -92,7 +105,7 @@
 ## Ainda não verificado / limites
 
 - **Não havia instalação real do Foundry 13 + sistema Lancer neste ambiente.** Documentos e ApplicationV2 são simulados nos testes; não substituem o ensaio real nem garantem compatibilidade com todas as versões/LCPs.
-- A prévia preparou o projeto JSON e seu link Blob. O adaptador não confirmou o evento de conclusão do download para o disco. A geração de imagens e sua decodificação já foram confirmadas na interface; o transporte do download permanece não confirmado neste ambiente.
+- Em uma verificação anterior, a prévia preparou o projeto JSON e seu link Blob. O adaptador não confirmou naquele momento o evento de conclusão do download para o disco. A geração de imagens e sua decodificação já foram confirmadas na interface; o transporte do download permanece não confirmado neste ambiente.
 - Homebrews têm textos e dados completos preservados. Seus efeitos especiais, rolagens, derivados da cópia, ActiveEffects e atores de deployable não são executados/criados automaticamente. Nem todo campo personalizado tem equivalência nativa no Lancer.
 - Animação completa, vídeo/WebM, processamento em lote e restauração de backup pela interface não estão implementados.
 - Smartphones/tablets, múltiplos usuários reais simultâneos, servidores externos com CORS restrito e projeto portátil levado a outro navegador não receberam validação integral.

@@ -3,7 +3,7 @@ import { assetPath } from './asset-path.js';
 import { isDefaultImage } from './actor-images.js';
 import { validateImageURL } from './image-url.js';
 import { imageFilename, storedImage } from './image-storage.js';
-import { applyTransaction } from './transaction.js';
+import { applyTransaction, usesNativeRing } from './transaction.js';
 import {prepareSheetPlan,applySheetPlan,readNativePilot}from'./sheet-adapter.js';
 import {validateNativeActor,validateNativeDocument,verifyNativeSheet} from './native-validation.js';
 import {readData} from './stored-data.js';
@@ -65,12 +65,19 @@ async function storePortrait(actor, source) {
   const result=await validateImageURL(source,{allowDisplayOnly:true});
   return {url:result.url,editable:result.editable};
 }
-function selectedTokens(actor,context=null) { const documents=(canvas.tokens?.controlled||[]).map(t=>t.document);const token=context?.document||context||actor.parent;if(token?.documentName==='Token'&&token.parent?.id===canvas.scene?.id&&!documents.some(d=>d.id===token.id))documents.push(token);return documents.filter(d=>d.actorId===(actor.parent?actor.parent.actorId:actor.id)); }
+function selectedTokens(actor,context=null) {
+  const actorId=actor.parent?actor.parent.actorId:actor.id;
+  const documents=(canvas.tokens?.controlled||[]).map(t=>t.document);
+  const current=context?.document||context||actor.parent;
+  if(current?.documentName==='Token'&&current.parent?.id===canvas.scene?.id)documents.push(current);
+  if(!actor.parent)for(const token of canvas.scene?.tokens?.contents||[])if(token.actorLink&&token.actorId===actorId)documents.push(token);
+  return [...new Map(documents.filter(d=>d.actorId===actorId).map(d=>[d.id,d])).values()];
+}
 async function open(actor, token = null, mode = 'images') {
   if (!game.user.isGM) throw new Error('O Token Studio está disponível para o mestre.');
   if (!actor || actor.documentName !== 'Actor') throw new Error('Escolha um personagem para abrir o editor.');
   if (!actor.canUserModify(game.user, 'update')) throw new Error('Você não pode editar este personagem.');
-  const key = actor.uuid;
+  const key = `${actor.uuid}:${token?.document?.uuid||token?.uuid||''}`;
   if (windows.has(key)) { const app = windows.get(key); if (app.minimized) await app.maximize(); app._unmount?.setMode?.(mode); app.bringToFront(); return app; }
   const app = new EditorClass(actor, token, mode); windows.set(key, app);
   try { await app.render(true); } catch (e) { windows.delete(key); throw e; }
@@ -82,7 +89,7 @@ Hooks.once('init', () => {
   const { ApplicationV2 } = foundry.applications.api;
   EditorClass = class TokenStudioApplication extends ApplicationV2 {
     static DEFAULT_OPTIONS = { id:'token-studio-editor-{id}', classes:['token-studio-window'], tag:'section', window:{ title:'Token Studio', icon:'fa-solid fa-crop-simple', resizable:true }, position:{ width:1280, height:900 } };
-    constructor(actor, token, mode) { super({ id:`token-studio-${actor.id}-${foundry.utils.randomID(5)}`, position:{ width:Math.min(1360, window.innerWidth - 40), height:Math.min(960, window.innerHeight - 40) } }); this.actor = actor; this.token = token; this.initialMode=mode; }
+    constructor(actor, token, mode) { super({ id:`token-studio-${actor.id}-${foundry.utils.randomID(5)}`, position:{ width:Math.min(1360, window.innerWidth - 40), height:Math.min(960, window.innerHeight - 40) } }); this.actor = actor; this.token = token; this.initialMode=mode;this.windowKey=`${actor.uuid}:${token?.document?.uuid||token?.uuid||''}`; }
     async _renderHTML() { const element = document.createElement('div'); element.className = 'ts-mount'; return element; }
     _replaceHTML(result, content) {
       // Keep the React root alive across resize and Foundry re-render events.
@@ -100,7 +107,7 @@ Hooks.once('init', () => {
         prepareSheetApply:(sheet,parts)=>prepareSheetPlan({actor,sheet,parts,game,validateActor:validateNativeActor,validateItem:async(data,parent)=>{const candidate=new CONFIG.Item.documentClass(data,{parent});validateNativeDocument(candidate);}}),
         applySheet:async(plan,sheet)=>{const result=await applySheetPlan({plan,sheet,game,verifyActor:verifyNativeSheet,resolvePortrait:storePortrait,createActor:data=>CONFIG.Actor.documentClass.create(data),saveBackup:async snapshots=>{plan.backupPath=await upload(actor,new Blob([JSON.stringify({schema:'token-studio-foundry-backup-1',createdAt:Date.now(),world:game.world.id,documents:snapshots},null,2)],{type:'application/json'}),'backups');}});ui.notifications.info(`Token Studio: ficha aplicada. Backup: ${plan.backupPath}`);return {...result,name:actor.name,source:actorSource(actor),tokenSource:isDefaultImage(actor.prototypeToken.texture.src)?null:imageRoute(actor.prototypeToken.texture.src),shareLink:actor.system.cloud_id?`https://compcon.app/link/pilot/${actor.system.cloud_id}/full/`:'',sheetProject:readData(actor.getFlag(ID,'sheetProject')),imageUpdate:result.portrait?{id:foundry.utils.randomID(),source:imageRoute(result.portrait),editable:result.portraitEditable}:null};},
         assetsBase:assetPath(route(`modules/${ID}/assets`)), name:actor.name, type:({pilot:'Piloto',mech:'Mech',npc:'NPC',deployable:'Deployable'})[actor.type] || actor.type,
-        key:`${game.world.id}:${actor.uuid}:${game.user.id}`, source, project, tokenSource,nativeRing:Boolean(editingToken.ring?.enabled), sceneCount:selectedTokens(actor,this.token).length,getSceneCount:()=>selectedTokens(actor,this.token).length,
+        key:`${game.world.id}:${actor.uuid}:${game.user.id}${this.token?':'+(this.token.document?.uuid||this.token.uuid||this.token.id):''}`, source, project, tokenSource,nativeRing:Boolean(editingToken.ring?.enabled),nativeSubject:Boolean(editingToken.ring?.enabled&&editingToken.ring.subject?.texture), sceneCount:selectedTokens(actor,this.token).length,getSceneCount:()=>selectedTokens(actor,this.token).length,
         presets:game.settings.get(ID, 'presets'), savePresets:items => game.settings.set(ID, 'presets', items),
         importFile:(file,kind) => upload(actor,file,kind), onClose:() => this.close(),
         pickImage:() => new Promise(resolve => { const FilePicker = picker(); let settled = false; const finish = value => { if (settled) return; settled = true; resolve(value); }; const app = new FilePicker({ type:'image', current:actor.img, callback:path => finish(path) }); app.addEventListener('close', () => finish(null), { once:true }); app.render(true); }),
@@ -115,16 +122,17 @@ Hooks.once('init', () => {
           const outputs = {};
           if (destinations.portrait && !destinations.originalAnimation) outputs.portrait = await exportView('portrait');
           if (destinations.prototype || destinations.scene) outputs.token = await exportView('token');
-          if(project.views.token.frame==='none'&&((destinations.prototype&&actor.prototypeToken.ring?.enabled)||tokens.some(t=>t.ring?.enabled)))outputs.nativeToken=await exportView('token',{nativeRing:true});
+          if((destinations.prototype&&usesNativeRing(actor.prototypeToken,project))||tokens.some(t=>usesNativeRing(t,project)))outputs.nativeToken=await exportView('token',{nativeRing:true});
           for (const [key, blob] of Object.entries(outputs)) paths[key] = await upload(actor, blob, key === 'portrait' ? 'portraits' : 'tokens');
           if (destinations.portrait && destinations.originalAnimation) paths.portrait = saved.views.portrait.src;
           saved.updatedAt = Date.now();
           await applyTransaction({ actor, scene:canvas.scene, tokens, project:saved, destinations, paths });
           ui.notifications.info('Token Studio: imagens aplicadas.');
+          return {source:actorSource(actor),appliedPortrait:destinations.portrait?imageRoute(paths.portrait):null};
         }
       });
     }
-    async _onClose(options) { this._unmount?.(); this._unmount = null; windows.delete(this.actor.uuid); await super._onClose(options); }
+    async _onClose(options) { this._unmount?.(); this._unmount = null; windows.delete(this.windowKey); await super._onClose(options); }
   };
   const api = { open,openSheet:actor=>open(actor,null,'sheet'), version:game.modules.get(ID).version }; game.modules.get(ID).api = api;
 });

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.0 — 2026-10-06
+
+- Palco usa o mesmo recorte e composição de moldura do PNG exportado, com margem para toda a saída. A arte não aparece fora da abertura.
+- Catálogo tem seleção marcada, confirmação separada, favoritos independentes e cartões com altura fixa. Favoritos continuam primeiro.
+- Modos explícitos: moldura estática, anel do Foundry ou sem borda. Sujeito nativo é preparado nos dois terços centrais; reabrir sujeito existente não repete seu padding.
+- Aplicação inclui tokens vinculados do ator na cena atual e tokens de contexto/selecionados. Cópias não vinculadas não são incluídas automaticamente. Janelas e rascunhos conservam contexto por token.
+- Carregamentos antigos não deixam prévias desatualizadas. Aplicação aguarda as imagens necessárias; falhas têm estado visível.
+- Controles isolados do CSS do host; marcações legíveis, zoom por roda e histórico acessível. Prévia de retrato e token fica visível durante a edição.
+- Ficha mantém campos e navegação legíveis em janelas compactas, lê o ator ao abrir sem rascunho, atualiza retrato após aplicação e permite limpar filtros. Revisão mostra valores detalhados sob demanda; combate é preservado por padrão.
+- 100 testes de domínio/bootstrap, 334 testes de canvas no navegador, 5 testes do módulo compilado e 4 testes Sites. Integração em mundo real Foundry 13 + Lancer ainda não verificada neste ambiente.
+
 ## 0.2.10 — 2026-10-06
 
 - Abrir um ator existente preserva a textura do token, mesmo quando ela é igual ao retrato; não acrescenta uma segunda moldura.

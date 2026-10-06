@@ -124,10 +124,26 @@ test('editar token da ficha usa subject nativo e inclui somente esse token na ce
   const token={documentName:'Token',id:'t',actorId:clicked.id,parent:scene,texture:{src:'scene.png'},ring:{enabled:true,subject:{texture:'actual-subject.png',scale:2.4}},canUserModify:()=>true};
   const app=await module.api.open(clicked,token);app._replaceHTML({}, {replaceChildren(){}});const host=mounted.at(-1);
   assert.equal(host.tokenSource,'/vtt/actual-subject.png');assert.equal(host.nativeRing,true);assert.equal(host.getSceneCount(),1);
-  const {createProject}=await import('../src/engine.js');const project=createProject('https://img.test/original.png');project.views.token.frame='none';
+  const {createProject}=await import('../src/engine.js');const project=createProject('https://img.test/original.png');project.views.token.frame='none';project.views.token.ringMode='native';
   const exports=[];await host.apply({project,destinations:{prototype:true,scene:true},exportView:async(key,options)=>{exports.push({key,options});return new Blob([options?.nativeRing?'native-image':'plain-image'],{type:'image/png'});}});
   assert.deepEqual(exports,[{key:'token',options:undefined},{key:'token',options:{nativeRing:true}}]);
   assert.equal(clicked.prototypeToken.ring.subject.scale,1);assert.equal(clicked.prototypeToken.texture.scaleX,1.6);assert.equal(clicked.prototypeToken.texture.scaleY,.8);
   assert.equal(calls.length,1);assert.equal(calls[0].length,1);assert.equal(calls[0][0]._id,'t');assert.equal(calls[0][0]['ring.subject.scale'],1);assert.equal(calls[0][0]['ring.subject.texture'],clicked.prototypeToken.ring.subject.texture);assert.equal(clicked.img,'portrait.png');
  }finally{foundry.applications.apps=saved.apps;game.settings.get=saved.settings;globalThis.ui=saved.ui;globalThis.canvas=saved.canvas;}
+});
+
+test('abrir pelo ator inclui tokens vinculados da cena, sem selecionar cópias não vinculadas',async()=>{
+ const previous=globalThis.canvas;
+ try{
+  const clicked={...actor,id:'linked-scene',uuid:'Actor.linked-scene',getFlag:()=>null,prototypeToken:{texture:{src:'token.png'}}};
+  const scene={id:'scene',tokens:{contents:[{id:'linked',actorId:clicked.id,actorLink:true},{id:'copy',actorId:clicked.id,actorLink:false},{id:'other',actorId:'other',actorLink:true}]}};
+  globalThis.canvas={scene,tokens:{controlled:[]}};
+  const app=await module.api.open(clicked);app._replaceHTML({}, {replaceChildren(){}});const host=mounted.at(-1);assert.equal(host.getSceneCount(),1);
+  canvas.tokens.controlled=[{document:scene.tokens.contents[1]},{document:scene.tokens.contents[0]}];assert.equal(host.getSceneCount(),2);
+ }finally{globalThis.canvas=previous;}
+});
+test('janelas de tokens distintos conservam o próprio contexto mesmo com o mesmo ator',async()=>{
+ const clicked={...actor,id:'many-contexts',uuid:'Actor.many-contexts'};
+ const one={uuid:'Scene.x.Token.one'},two={uuid:'Scene.x.Token.two'};
+ const a=await module.api.open(clicked,one),b=await module.api.open(clicked,two);assert.notEqual(a,b);assert.equal(a.token,one);assert.equal(b.token,two);assert.equal(await module.api.open(clicked,one),a);
 });

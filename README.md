@@ -24,7 +24,7 @@ O Tokenizer não é necessário. Esta versão não depende de outros módulos. F
 
 ## Vincular ficha COMP/CON ao ator
 
-Abra Token Studio no ator piloto → **Ficha do mestre** → importe o link/código ou JSON → **Vincular / atualizar ator…** → revise e aplique. Identidade, retrato, build, recursos e mechas começam selecionados. O código e a data de sincronização passam à ficha nativa do Lancer, e o mecha favorito fica ativo no piloto. O retrato é validado e usado por URL, sem cópia local, e aparece na ficha; um token personalizado mantém sua arte e seus ajustes. O token padrão fica vinculado ao ator. Para buscar uma versão nova, use **Atualizar origem**, revise e aplique novamente. Não há sincronização em segundo plano nem escrita na conta COMP/CON.
+Abra Token Studio no ator piloto → **Ficha do mestre** → importe o link/código ou JSON → **Vincular / atualizar ator…** → revise e aplique. Identidade, retrato, build e mechas começam selecionados. Recursos atuais de combate ficam desmarcados para preservar a sessão. O código e a data de sincronização passam à ficha nativa do Lancer, e o mecha favorito fica ativo no piloto. O retrato é validado e usado por URL, sem cópia local, e aparece na ficha; um token personalizado mantém sua arte e seus ajustes. O token padrão fica vinculado ao ator. Para buscar uma versão nova, use **Atualizar origem**, revise e aplique novamente. Não há sincronização em segundo plano nem escrita na conta COMP/CON.
 
 ## Usar
 

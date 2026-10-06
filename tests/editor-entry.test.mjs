@@ -7,12 +7,14 @@ import {createProject} from '../src/engine.js';
 import {replaceArtwork,initializeArtwork,builtinFramePatch} from '../src/editor-artwork.js';
 const traverse=traversal.default || traversal;
 test('comandos reais do editor não usam funções sem importação',async()=>{
-  const source=await readFile(new URL('../src/App.jsx',import.meta.url),'utf8');
+  for(const file of ['App.jsx','SheetEditor.jsx','FrameGallery.jsx','Suite.jsx']){
+  const source=await readFile(new URL('../src/'+file,import.meta.url),'utf8');
   const ast=parse(source,{sourceType:'module',plugins:['jsx']});
   const browser=new Set(['window','document','devicePixelRatio','FileReader','ResizeObserver','Image','localStorage','navigator','indexedDB','fetch','crypto','requestAnimationFrame','cancelAnimationFrame','setTimeout','clearTimeout','URL','Blob','TextDecoder','structuredClone','console']);
   const missing=new Set();
   traverse(ast,{ReferencedIdentifier(path){const name=path.node.name;if(!path.scope.hasBinding(name)&&!browser.has(name))missing.add(name);}});
-  assert.deepEqual([...missing],[]);
+  assert.deepEqual([...missing],[],file);
+  }
 });
 test('uma escolha prepara retrato limpo e token com moldura sem compartilhar ajustes',()=>{
   const old=createProject('old.png');old.views.portrait.frame='gold';old.views.token.frame='custom';old.views.token.frameSrc='border.webp';old.views.token.zoom=3;

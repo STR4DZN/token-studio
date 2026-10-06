@@ -602,7 +602,7 @@ export function SheetEditor({ host = {} }) {
       identity: true,
       portrait: true,
       build: true,
-      combat: true,
+      combat: false,
       mechs: true,
     });
   const latest = useRef(sheet),
@@ -618,7 +618,7 @@ export function SheetEditor({ host = {} }) {
   useEffect(() => {
     let alive = true;
     Promise.all([readDraft(key), readDraft(noteKey)])
-      .then(([stored, note]) => {
+      .then(async ([stored, note]) => {
         if (!alive) return;
         if (
           stored &&
@@ -626,6 +626,10 @@ export function SheetEditor({ host = {} }) {
         )
           setSheet(validateSheet(stored));
         if (note?.text != null) setGmNote(note.text);
+        if(!stored&&!host.sheetProject&&host.readActorSheet){
+          try{const native=await host.readActorSheet();if(alive&&!latest.current)setSheet(validateSheet(native));}
+          catch(error){if(alive)setNotice('Não foi possível ler a ficha do ator: '+error.message);}
+        }
       })
       .catch(() => {
         if (alive)
@@ -705,10 +709,11 @@ export function SheetEditor({ host = {} }) {
   useEffect(()=>{if(data){setUnitIndex(-1);setLoadoutIndex(data.active_index||0);}},[data?.id]);
   const diagnostics=useMemo(()=>data?sheetDiagnostics(data):[],[data]);
   const groups=useMemo(()=>data?ruleGroups(data,unitIndex,{includeInactive,origin:category,kind:ruleKind,activation,query}):[],[data,unitIndex,includeInactive,category,ruleKind,activation,query]);
+  const portraitOverride=useRef({source:null,original:null});
   const portrait = useMemo(()=>{
-    try { return pilotPortrait(unit) || (unitIndex < 0 ? host.source || '' : ''); }
+    try { const original=pilotPortrait(data);if(portraitOverride.current.source!==host.appliedPortrait)portraitOverride.current={source:host.appliedPortrait,original};return (unitIndex<0&&original===portraitOverride.current.original?host.appliedPortrait:'') || pilotPortrait(unit) || (unitIndex < 0 ? host.source || '' : ''); }
     catch { return ''; }
-  },[unit,unitIndex,host.source]);
+  },[unit,data,unitIndex,host.source,host.appliedPortrait]);
   const portraitFailure=portraitFailures[portrait]||'';
   const imageIssues=Object.entries(portraitFailures).filter(([src])=>[data,...(data?.mechs||[])].some(unit=>{try{return pilotPortrait(unit)===src;}catch{return false;}})||host.source===src);
   function update(next, record = true, applying = false) {
@@ -1221,7 +1226,7 @@ export function SheetEditor({ host = {} }) {
         <>
           <header className="ts-sheet-header" inert={busy ? true : undefined}>
             {portrait && !portraitFailure && <img className="ts-sheet-avatar" src={portrait} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={()=>setPortraitFailures(previous=>({...previous,[portrait]:`Retrato de ${unit?.name||data.name} não carregou. Confira a URL e o acesso à imagem.`}))} alt={`Retrato de ${unit?.name || data.name}`} />}
-            {portraitFailure && <span className="ts-sheet-avatar ts-avatar-failed" title={portraitFailure}><Ic name="image"/></span>}
+            {portraitFailure && <button className="ts-sheet-avatar ts-avatar-failed" aria-label="Retrato indisponível: ver pendência" title={portraitFailure} onClick={()=>selectSection('diagnostics')}><Ic name="image"/></button>}
             <div>
               <div className="ts-sheet-eyebrow">
                 {unitIndex<0 ? "Piloto" : "Mecha"} •{" "}
@@ -1485,7 +1490,7 @@ export function SheetEditor({ host = {} }) {
                   <select aria-label="Origem das regras" value={category} onChange={e=>setCategory(e.target.value)}><option value="">Todas as origens</option>{Object.entries(originLabels).map(([key,label])=><option value={key} key={key}>{label}</option>)}</select>
                   <select aria-label="Categoria da regra" value={ruleKind} onChange={e=>{setRuleKind(e.target.value);setActivation('');}}><option value="">Todas as regras</option>{Object.entries(ruleLabels).map(([key,label])=><option value={key} key={key}>{label}</option>)}</select>
                   <select aria-label="Tipo de ação" value={activation} onChange={e=>setActivation(e.target.value)}><option value="">Todas as ativações</option>{[...new Set(unitActions(actions,unitIndex,{includeInactive:true}).map(a=>a.action.activation).filter(Boolean))].map(type=><option key={type}>{type}</option>)}</select>
-                  <button className="ts-button" aria-pressed={includeInactive} onClick={()=>setIncludeInactive(!includeInactive)}>Mostrar inativas</button>
+                  <button className="ts-button" disabled={!query&&!category&&!ruleKind&&!activation&&!includeInactive} onClick={()=>{setQuery('');setCategory('');setRuleKind('');setActivation('');setIncludeInactive(false);}}>Limpar filtros</button><button className="ts-button" aria-pressed={includeInactive} onClick={()=>setIncludeInactive(!includeInactive)}>Mostrar inativas</button>
                 </div>
                 <p className="ts-sheet-muted">{groups.length} origem(ns) • {groups.reduce((sum,g)=>sum+g.rules.length,0)} regras encontradas • {includeInactive?'Inclui ranks e loadouts inativos':'Ranks adquiridos e loadouts ativos'}</p>
                 <div className="ts-rule-origins">{groups.map(group=><RuleOrigin key={group.key} group={group} sheet={sheet} editing={editing} edit={edit} useAction={useAction}/>)}</div>
@@ -2095,14 +2100,14 @@ export function SheetEditor({ host = {} }) {
                       Conflito com sua edição
                     </span>
                   )}
-                  <div className="ts-sheet-review-values">
+                  <details className="ts-sheet-review-values"><summary>Ver valores atuais e novos</summary>
                     <span>
                       Local: {JSON.stringify(c.before) ?? "Não existe"}
                     </span>
                     <span>
                       Origem: {JSON.stringify(c.after) ?? "Não existe"}
                     </span>
-                  </div>
+                  </details>
                 </div>
               </label>
             ))}
@@ -2176,7 +2181,7 @@ export function SheetEditor({ host = {} }) {
         >
           <p>
             Destinos separados. Combate desmarcado preserva os recursos atuais
-            do Foundry. A importação nunca depende do Tokenizer.
+            do Foundry. Revise os destinos antes de confirmar.
           </p>
           <div className="ts-destinations">
             {[
@@ -2213,7 +2218,7 @@ export function SheetEditor({ host = {} }) {
           <div className="ts-dialog-actions">
             <button
               className="ts-button ts-primary"
-              disabled={busy || !Object.values(applyParts).some(Boolean)}
+              disabled={busy || !['identity','portrait','build','combat','mechs'].some(k=>applyParts[k])}
               onClick={reviewFoundry}
             >
               {busy ? "Preparando…" : "Preparar revisão"}
@@ -2242,12 +2247,12 @@ export function SheetEditor({ host = {} }) {
                 <div>
                   <strong>{c.document}</strong>
                   <code> • {c.field}</code>
-                  <div className="ts-sheet-review-values">
+                  <details className="ts-sheet-review-values"><summary>Ver valores atuais e novos</summary>
                     <span>
                       Atual: {JSON.stringify(c.before) ?? "Não existe"}
                     </span>
                     <span>Após: {JSON.stringify(c.after) ?? "Não existe"}</span>
-                  </div>
+                  </details>
                 </div>
               </div>
             ))}

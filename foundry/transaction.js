@@ -1,13 +1,14 @@
 // The only fields this editor is allowed to modify are image destinations and its own flags.
-const tokenPath=(token,project,paths)=>project.views.token.frame==='none'&&token?.ring?.enabled&&paths.nativeToken?paths.nativeToken:paths.token;
+export const usesNativeRing=(token,project)=>project.views.token.frame==='none'&&(project.views.token.ringMode==='native'||(project.views.token.ringMode==null&&token?.ring?.enabled));
+const tokenPath=(token,project,paths)=>usesNativeRing(token,project)&&paths.nativeToken?paths.nativeToken:paths.token;
 export function buildActorPatch(project, destinations, paths, actor = null) {
   const patch = { 'flags.token-studio.project': project };
   if (destinations.portrait) patch.img = paths.portrait;
   if (destinations.prototype) {
     const path=tokenPath(actor?.prototypeToken,project,paths);
     patch['prototypeToken.texture.src'] = path;
-    if (project.views.token.frame !== 'none') patch['prototypeToken.ring.enabled'] = false;
-    else if(actor?.prototypeToken.ring?.enabled) {
+    patch['prototypeToken.ring.enabled'] = usesNativeRing(actor?.prototypeToken,project);
+    if(usesNativeRing(actor?.prototypeToken,project)) {
       patch['prototypeToken.ring.subject.texture']=path;
       if(paths.nativeToken)patch['prototypeToken.ring.subject.scale']=1;
     }
@@ -15,7 +16,7 @@ export function buildActorPatch(project, destinations, paths, actor = null) {
   return patch;
 }
 export function buildScenePatch(tokens, project, paths) {
-  return tokens.map(token => {const path=tokenPath(token,project,paths);return { _id: token.id, 'texture.src': path, ...(project.views.token.frame !== 'none' ? { 'ring.enabled': false } : token.ring?.enabled ? {'ring.subject.texture':path,...(paths.nativeToken?{'ring.subject.scale':1}:{})} : {}) };});
+  return tokens.map(token => {const path=tokenPath(token,project,paths);return { _id: token.id, 'texture.src': path, 'ring.enabled':usesNativeRing(token,project), ...(usesNativeRing(token,project)?{'ring.subject.texture':path,...(paths.nativeToken?{'ring.subject.scale':1}:{})}:{}) };});
 }
 export async function applyTransaction({ actor, scene, tokens, project, destinations, paths }) {
   const before = { img: actor.img, 'prototypeToken.texture.src': actor.prototypeToken.texture.src, 'prototypeToken.ring.enabled': actor.prototypeToken.ring?.enabled ?? false, 'prototypeToken.ring.subject.texture': actor.prototypeToken.ring?.subject?.texture || '', 'prototypeToken.ring.subject.scale':actor.prototypeToken.ring?.subject?.scale??1, 'flags.token-studio.project': actor.getFlag('token-studio', 'project') ?? null };

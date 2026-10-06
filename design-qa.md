@@ -1,3 +1,24 @@
+# Revisão dos editores — 0.3.0
+
+Alvo: projeto existente e quatro capturas do usuário. Tema aprovado: carvão e lavanda. Ambiente de teste: Chrome, editor real montado em host simulado. As imagens originais do usuário foram preservadas.
+
+| Etapa | Problema reproduzido | Correção e estado |
+| --- | --- | --- |
+| 1. Abrir editor | Área ampliada 5%, guias cortadas; moldura omitida no palco | Palco e PNG compartilham composição; saída inteira com margem. Verificado |
+| 2. Escolher moldura | Mudança imediata, seleção indistinta; cartões comprimidos | Seleção marcada, confirmação e favorito separados, 180 px por cartão. Verificado |
+| 3. Enquadrar | Arte mostrada fora da área realmente salva; previews abaixo da dobra | Recorte real no palco; duas prévias fixas; roda e histórico. Verificado |
+| 4. Aplicar imagens | Tokens vinculados não selecionados ficavam antigos; anel implícito | Destinos claros e rechecados; anel explícito; contexto isolado. Verificado em documentos simulados |
+| 5. Navegar na ficha | Navegação/controles com pouco espaço; review de JSON extensa | Alturas legíveis, rolagem independente, detalhes sob demanda; filtros por mecha/origem. Verificado |
+| 6. Confirmar importação | Combate sobrescrito por padrão; retrato do editor não atualizado | Combate desmarcado por padrão; retrato aplicado propagado; ator lido ao abrir ficha vazia. Coberto em código/testes simulados |
+
+## Cobertura e limites
+
+100 testes de domínio/bootstrap, 334 testes de imagem no navegador (330 molduras + 4 regressões), 5 testes do módulo empacotado e 4 de Sites. Fluxos manuais: seleção/favorito, marcação de destinos, roda/undo, aplicação em campos separados, editar/desfazer nome, unidade/mecha e filtro de armas. Janela de 680 px com rodapé visível, filtros de 42–45 px e sem rolagem horizontal.
+
+A etapa de execução em um mundo real do Foundry 13 + Lancer permanece pendente porque este ambiente não contém esse servidor. Não equivale a declarar compatibilidade verificada, perfeição ou execução automática de todo homebrew. URLs privadas/expiradas e CORS restrito dependem da hospedagem; falhas aparecem na interface.
+
+## Histórico de revisões anteriores
+
 # Revisão visual — Token Studio
 
 **Findings**

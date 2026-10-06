@@ -15,9 +15,9 @@ test('Livre mantém deslocamentos; Preencher impede zoom insuficiente',()=>{cons
 test('presets transferem estilo sem substituir a imagem original',()=>{const a={...createView('a.png'),color:'#abcdef',zoom:2},b=createView('b.png');assert.equal(applyPreset(b,presetFromView(a)).src,'b.png');assert.equal(applyPreset(b,presetFromView(a)).color,'#abcdef');});
 test('importação rejeita projetos corrompidos e fontes executáveis',()=>{const p=createProject('x.png');assert.equal(validateProject(p),p);for(const mutate of [p=>p.schema=9,p=>p.views.token.zoom=NaN,p=>p.views.token.aspect='0:0',p=>p.views.token.src='javascript:alert(1)',p=>p.views.token.frameSrc='data:image/svg+xml;base64,AAAA']){const invalid=structuredClone(p);mutate(invalid);assert.throws(()=>validateProject(invalid));}});
 test('aplicar somente retrato não modifica token, estatísticas ou escala',()=>{const p=createProject('x'),patch=buildActorPatch(p,{portrait:true,prototype:false},{portrait:'new.png'});assert.equal(patch.img,'new.png');assert.ok(!Object.keys(patch).some(k=>k.startsWith('prototypeToken')));assert.ok(!Object.keys(patch).some(k=>k.startsWith('system')));});
-test('moldura própria desliga anel duplicado; anel nativo recebe a nova arte',()=>{const p=createProject('x'),t={id:'one',ring:{enabled:true}};assert.equal(buildScenePatch([t],p,{token:'new.png'})[0]['ring.enabled'],false);p.views.token.frame='none';assert.equal(buildScenePatch([t],p,{token:'new.png'})[0]['ring.subject.texture'],'new.png');assert.equal(buildActorPatch(p,{prototype:true},{token:'new.png'},{prototypeToken:{ring:{enabled:true}}})['prototypeToken.ring.subject.texture'],'new.png');});
+test('moldura própria desliga anel duplicado; anel nativo recebe a nova arte',()=>{const p=createProject('x'),t={id:'one',ring:{enabled:true}};assert.equal(buildScenePatch([t],p,{token:'new.png'})[0]['ring.enabled'],false);p.views.token.frame='none';delete p.views.token.ringMode;assert.equal(buildScenePatch([t],p,{token:'new.png'})[0]['ring.subject.texture'],'new.png');assert.equal(buildActorPatch(p,{prototype:true},{token:'new.png'},{prototypeToken:{ring:{enabled:true}}})['prototypeToken.ring.subject.texture'],'new.png');});
 test('tokens nativos e estáticos recebem variantes distintas sem alterar escala da textura',()=>{
- const p=createProject('x');p.views.token.frame='none';const paths={token:'plain.png',nativeToken:'padded.png'};
+ const p=createProject('x');p.views.token.frame='none';delete p.views.token.ringMode;const paths={token:'plain.png',nativeToken:'padded.png'};
  const patch=buildActorPatch(p,{prototype:true},paths,{prototypeToken:{ring:{enabled:true}}});
  assert.equal(patch['prototypeToken.texture.src'],'padded.png');assert.equal(patch['prototypeToken.ring.subject.texture'],'padded.png');assert.equal(patch['prototypeToken.ring.subject.scale'],1);
  assert.ok(!('prototypeToken.texture.scaleX' in patch));assert.ok(!('prototypeToken.texture.scaleY' in patch));
@@ -55,9 +55,22 @@ test('ator antigo com URL sem CORS abre em visualização; falha de moldura não
 });
 
 test('falha na cena restaura a escala original do subject nativo',async()=>{
- const f=fixture();f.project.views.token.frame='none';f.paths.nativeToken='padded.png';
+ const f=fixture();f.project.views.token.frame='none';f.project.views.token.ringMode='native';f.paths.nativeToken='padded.png';
  f.actor.prototypeToken.ring={enabled:true,subject:{texture:'old-subject',scale:2.4}};f.tokens[0].ring.subject.scale=1.8;
  let call=0;f.scene.updateEmbeddedDocuments=async(type,patch)=>{f.sceneCalls.push(patch);if(!call++)throw Error('fail');};
  await assert.rejects(applyTransaction(f),/anteriores foram restauradas/);
  assert.equal(f.actorCalls[0]['prototypeToken.ring.subject.scale'],1);assert.equal(f.actorCalls[1]['prototypeToken.ring.subject.scale'],2.4);assert.equal(f.sceneCalls[1][0]['ring.subject.scale'],1.8);
+});
+
+test('modo nativo explícito aplica a mesma borda a destinos mistos; sem moldura desliga ambos',()=>{
+ const p=createProject('x');Object.assign(p.views.token,{frame:'none',ringMode:'native'});
+ const tokens=[{id:'plain',ring:{enabled:false}},{id:'native',ring:{enabled:true}}];
+ for(const patch of buildScenePatch(tokens,p,{token:'plain.png',nativeToken:'subject.png'})){assert.equal(patch['ring.enabled'],true);assert.equal(patch['ring.subject.texture'],'subject.png');assert.equal(patch['texture.src'],'subject.png');assert.equal(patch['ring.subject.scale'],1);}
+ p.views.token.ringMode='static';for(const patch of buildScenePatch(tokens,p,{token:'plain.png',nativeToken:'subject.png'})){assert.equal(patch['ring.enabled'],false);assert.equal(patch['texture.src'],'plain.png');assert.equal('ring.subject.texture' in patch,false);}
+});
+test('área de saída inteira cabe no palco com margem para imagens e janelas extremas',async()=>{
+ const {stageLayout}=await import('../src/engine.js');
+ for(const size of [{width:512,height:512},{width:256,height:512},{width:512,height:288}])for(const [w,h]of [[600,300],[280,200],[900,640]]){
+  const r=stageLayout(size,w,h);assert.ok(r.left>=23.99);assert.ok(r.top>=23.99);assert.ok(r.left+size.width*r.scale<=w-23.99);assert.ok(r.top+size.height*r.scale<=h-23.99);
+ }
 });

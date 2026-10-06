@@ -3,7 +3,7 @@ import { assetPath } from './asset-path.js';
 export const SCHEMA = 1;
 export const clone = value => structuredClone(value);
 export function createView(src, token = true) {
-  return { src, fit: token ? 'cover' : 'contain', zoom: 1, x: 0, y: 0, rotation: 0, aspect: '1:1', frame: token ? 'silver' : 'none', frameSrc: '', color: '#b5a2fa', background: 'transparent', backgroundColor: '#25242d', aperture: .82, opacity: 1, shape: token ? 'circle' : 'rectangle', mask: 'circle', animated: false };
+  return { src, fit: token ? 'cover' : 'contain', zoom: 1, x: 0, y: 0, rotation: 0, aspect: '1:1', frame: token ? 'silver' : 'none', frameSrc: '', ringMode: 'static', color: '#b5a2fa', background: 'transparent', backgroundColor: '#25242d', aperture: .82, opacity: 1, shape: token ? 'circle' : 'rectangle', mask: 'circle', animated: false };
 }
 export function createProject(src) {
   return { schema: SCHEMA, active: 'token', views: { token: createView(src), portrait: createView(src, false) }, updatedAt: Date.now() };
@@ -14,6 +14,8 @@ export function validateProject(project) {
     const v = project.views?.[key];
     if (!v || typeof v.src !== 'string' || v.src.length > 50_000_000) throw new Error('Imagem de origem inválida.');
     if (/^(?:javascript|vbscript):/i.test(v.src) || (/^data:/i.test(v.src) && !/^data:image\/(png|jpeg|webp|gif);base64,/i.test(v.src))) throw new Error('Formato de imagem não permitido.');
+    if(v.sourceCrop!=null && v.sourceCrop!=='nativeRing')throw new Error('Recorte de origem inválido.');
+    if(v.ringMode!=null && !['static','native'].includes(v.ringMode))throw new Error('Modo de borda inválido.');
     if(v.displayOnly!=null && typeof v.displayOnly!=='boolean')throw new Error('Estado de acesso à imagem inválido.');
     for (const p of ['zoom', 'x', 'y', 'rotation', 'aperture', 'opacity']) if (!Number.isFinite(v[p])) throw new Error('Ajustes de imagem inválidos.');
     if (v.zoom < .1 || v.zoom > 8 || v.aperture < .1 || v.aperture > 1 || v.opacity < 0 || v.opacity > 1 || Math.abs(v.x) > 100 || Math.abs(v.y) > 100 || Math.abs(v.rotation) > 3600) throw new Error('Ajustes fora dos limites.');
@@ -78,7 +80,8 @@ export function imageDimensions(image) { return { width: image.naturalWidth || i
 export function createCanvas(width, height) { const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height; return canvas; }
 export function framePath(view, assetsBase) { return view.frame === 'custom' ? view.frameSrc : view.frame === 'none' ? '' : assetPath(assetsBase, 'frame-silver.png'); }
 export async function loadResources(view, assetsBase) {
-  const [image, frame] = await Promise.all([loadImage(view.src), loadImage(framePath(view, assetsBase))]);
+  let [image, frame] = await Promise.all([loadImage(view.src), loadImage(framePath(view, assetsBase))]);
+  if(image&&view.sourceCrop==='nativeRing'){const d=imageDimensions(image),w=Math.round(d.width*2/3),h=Math.round(d.height*2/3),crop=createCanvas(w,h);crop.getContext('2d').drawImage(image,(d.width-w)/2,(d.height-h)/2,w,h,0,0,w,h);image=crop;}
   return { image, frame, dimensions: image ? imageDimensions(image) : null };
 }
 // Find only the enclosed transparent region. Exterior alpha is not a portrait mask.
@@ -141,20 +144,22 @@ export function renderOutput(canvas, view, resources, withFrame = true) {
   }
   return canvas;
 }
+export function stageLayout(size, width, height, padding = 24) {
+  const scale = Math.max(.01, Math.min((width - padding * 2) / size.width, (height - padding * 2) / size.height));
+  return {scale, left:(width-size.width*scale)/2, top:(height-size.height*scale)/2};
+}
 export function renderStage(canvas, view, resources, size, dpr = 1) {
   const ctx = canvas.getContext('2d'), width = canvas.width / dpr, height = canvas.height / dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, width, height);
-  const scale = Math.min(width / size.width, height / size.height) * 1.05;
-  const left = (width - size.width * scale) / 2, top = (height - size.height * scale) / 2;
-  ctx.save(); ctx.translate(left, top); ctx.scale(scale, scale);
-  drawSource(ctx, view, resources, size.width, size.height);
-  ctx.restore();
-  ctx.fillStyle = 'rgba(17,17,24,.60)'; ctx.fillRect(0, 0, width, height);
-  const result = createCanvas(size.width, size.height); renderOutput(result, view, resources, false);
-  ctx.drawImage(result, left, top, size.width * scale, size.height * scale);
-  ctx.save(); ctx.translate(left, top); ctx.scale(scale, scale); ctx.strokeStyle = '#c7b8ff'; ctx.lineWidth = 2 / scale;
-  clipPath(ctx, view, size.width, size.height); ctx.stroke(); ctx.restore();
-  return { left, top, scale };
+  const {left,top,scale} = stageLayout(size,width,height);
+  // Stage and exports use exactly the same clipping and frame composition.
+  const result = createCanvas(size.width, size.height); renderOutput(result,view,resources);
+  const w=size.width*scale,h=size.height*scale;
+  ctx.save();ctx.beginPath();ctx.rect(left,top,w,h);ctx.clip();
+  for(let y=top;y<top+h;y+=16)for(let x=left;x<left+w;x+=16){ctx.fillStyle=((Math.floor((x-left)/16)+Math.floor((y-top)/16))%2)?'#303139':'#2b2c33';ctx.fillRect(x,y,16,16);}
+  ctx.drawImage(result,left,top,w,h);ctx.restore();
+  if(view.frame==='none'){ctx.save();ctx.translate(left,top);ctx.scale(scale,scale);ctx.strokeStyle='#b5a2fa66';ctx.lineWidth=1/scale;clipPath(ctx,view,size.width,size.height);ctx.stroke();ctx.restore();}
+  return {left,top,scale};
 }
 export function prepareOutputCanvas(canvas, size, {square=false,nativeRing=false}={}) {
   if (!nativeRing && (!square || canvas.width===canvas.height)) return canvas;
@@ -183,7 +188,7 @@ export async function exportView(view, assetsBase, size = 1024, format = 'image/
     return blob;
   } catch (error) { if (error.name === 'SecurityError') throw new Error('O endereço externo bloqueou a exportação. Importe o arquivo pelo computador.'); throw error; }
 }
-export function presetFromView(view) { const { src, animated, ...style } = view; return style; }
+export function presetFromView(view) { const { src, animated, sourceCrop, ...style } = view; return style; }
 export function applyPreset(view, preset) { return { ...view, ...preset, src: view.src, animated: view.animated }; }
 export function downloadBlob(blob, filename, automatic = true) {
   const url = URL.createObjectURL(blob);

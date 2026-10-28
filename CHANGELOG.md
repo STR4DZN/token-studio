@@ -1,3 +1,9 @@
+# 0.4.2 — carregamento identificado por versão
+
+- Entrada, dependências e CSS do módulo em caminhos próprios da versão.
+- Versão e contagem exibidas no catálogo para identificar o editor realmente carregado.
+- Mantém 435 molduras e 40 apoios, incluindo NPC padrão (default-frame-npc.png).
+
 # 0.4.1 — catálogo consolidado
 
 - Inclui a moldura NPC padrão na coleção Personalizadas.

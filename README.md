@@ -1,8 +1,8 @@
-# Token Studio — v0.4.1
+# Token Studio — v0.4.2
 
 Editor independente de retratos e tokens, catálogo de molduras e painel de ficha COMP/CON para o mestre. Interface baseada na proposta visual escolhida: tema escuro, destaque violeta, imagem grande e controles diretos.
 
-> Candidato local de correções: 0.4.1 ainda não foi publicado neste trabalho. A URL pública de instalação acompanha a última release publicada. Para testar este candidato, use o ZIP preparado e a instalação manual abaixo. Foundry 13 + Lancer reais ainda exigem homologação.
+> Candidato local de correções: 0.4.2 ainda não foi publicado neste trabalho. A URL pública de instalação acompanha a última release publicada. Para testar este candidato, use o ZIP preparado e a instalação manual abaixo. Foundry 13 + Lancer reais ainda exigem homologação.
 
 ## Instalar no Foundry 13
 

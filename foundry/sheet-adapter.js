@@ -1,393 +1,41 @@
-import { copy, parsePilot, entries, validateSheet, pilotPortrait, shareCode } from "./compcon.js";
-import { isDefaultImage, syncPortraitProject } from './actor-images.js';
-import {storeData,readData} from './stored-data.js';
-const ID = "token-studio";
-const kinds = {
-  skills: "skill",
-  talents: "talent",
-  licenses: "license",
-  core_bonuses: "core_bonus",
-  reserves: "reserve",
-  orgs: "organization",
-  armor: "pilot_armor",
-  weapons: "pilot_weapon",
-  gear: "pilot_gear",
-  frame: "frame",
-  systems: "mech_system",
-  mech_weapons: "mech_weapon",
-  weapon_mods: "weapon_mod",
-};
-const flagKey = (item) => item.flags?.[ID]?.sheetKey;
+import {
+  copy,
+  parsePilot,
+  entries,
+  validateSheet,
+  pilotPortrait,
+  shareCode,
+} from "./compcon.js";
+import { isDefaultImage, syncPortraitProject } from "./actor-images.js";
+import { readData } from "./stored-data.js";
+import {
+  instanceIdentity,
+  instanceKinds,
+  loadoutContext,
+} from "./sheet-identity.js";
+import { applyItemState } from "./item-state.js";
+import {
+  ID,
+  list,
+  currentItems,
+  managedInfo,
+  permission,
+} from "./sheet-common.js";
+import { toNativeItem, html, counter } from "./sheet-items.js";
+import { plannedActorData } from "./sheet-loadout.js";
+export { toNativeItem } from "./sheet-items.js";
+export { plannedActorData } from "./sheet-loadout.js";
+export { applySheetPlan } from "./sheet-apply.js";
+export { readNativePilot } from "./sheet-native.js";
 const snapshot = (actor) => copy(actor.toObject());
-const currentItems = (actor) =>
-  actor.items?.contents || Array.from(actor.items?.values?.() || []);
-const text = (value) => (value == null ? "" : String(value));
-const list = (value) => (Array.isArray(value) ? value : []);
-const cleanObject = (value) =>
-  Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined));
-const allowedTags = new Set([
-  "P",
-  "BR",
-  "B",
-  "STRONG",
-  "I",
-  "EM",
-  "U",
-  "UL",
-  "OL",
-  "LI",
-  "BLOCKQUOTE",
-  "H3",
-  "H4",
-  "TABLE",
-  "TBODY",
-  "TR",
-  "TD",
-  "TH",
-]);
-function html(value) {
-  const source = text(value);
-  if (typeof document === "undefined")
-    return source
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;");
-  const template = document.createElement("template");
-  template.innerHTML = source;
-  const output = document.createElement("div");
-  function append(node, to) {
-    if (node.nodeType === 3) {
-      to.append(document.createTextNode(node.textContent));
-      return;
-    }
-    if (node.nodeType !== 1) return;
-    if (
-      ["SCRIPT", "STYLE", "IFRAME", "OBJECT", "EMBED", "SVG", "MATH"].includes(
-        node.tagName,
-      )
-    )
-      return;
-    const target = allowedTags.has(node.tagName)
-      ? document.createElement(node.tagName.toLowerCase())
-      : to;
-    if (target !== to) to.append(target);
-    for (const child of node.childNodes) append(child, target);
-  }
-  for (const child of template.content.childNodes) append(child, output);
-  return output.innerHTML;
-}
-function checklist(values, names) {
-  if (values == null) return null;
-  if (!Array.isArray(values)) return copy(values);
-  return Object.fromEntries(
-      names.map((n) => [n, values.some(v => text(v).toLowerCase() === 'any' || text(v).toLowerCase() === n.toLowerCase())]),
-  );
-}
-function synergy(s) {
-  const values = v => v == null || typeof v === 'object' && !Array.isArray(v) ? v : Array.isArray(v) ? v : [v];
-  return {
-    detail: text(s.detail),
-    locations: (Array.isArray(s.locations) ? s.locations : s.locations ? [s.locations] : []).flatMap(l => text(l).toLowerCase().split(',').map(x => x.trim()).filter(Boolean)),
-    damage_types: checklist(values(s.damage_types), ['Burn','Energy','Explosive','Heat','Kinetic','Variable']),
-    range_types: checklist(values(s.range_types), ['Blast','Burst','Cone','Line','Range','Threat']),
-    weapon_types: checklist(values(s.weapon_types), ['Rifle','Launcher','Cannon','CQB','Melee','Nexus']),
-    weapon_sizes: checklist(values(s.weapon_sizes), ['Auxiliary','Main','Heavy','Superheavy']),
-    system_types: checklist(values(s.system_types), ['AI','Armor','Deployable','Drone','Flight System','Integrated','Mod','Shield','System','Tech']),
-  };
-}
-function bonus(b) {
-  return {
-    lid: b.id || b.lid || "",
-    val: text(b.val),
-    replace: !!b.replace,
-    overwrite: !!b.overwrite,
-    damage_types: checklist(b.damage_types, [
-      "Burn",
-      "Energy",
-      "Explosive",
-      "Heat",
-      "Kinetic",
-      "Variable",
-    ]),
-    range_types: checklist(b.range_types, [
-      "Blast",
-      "Burst",
-      "Cone",
-      "Line",
-      "Range",
-      "Thrown",
-      "Threat",
-    ]),
-    weapon_types: checklist(b.weapon_types, [
-      "Rifle",
-      "Launcher",
-      "Cannon",
-      "CQB",
-      "Melee",
-      "Nexus",
-    ]),
-    weapon_sizes: checklist(b.weapon_sizes, [
-      "Auxiliary",
-      "Main",
-      "Heavy",
-      "Superheavy",
-    ]),
-  };
-}
-function counter(c) {
-  return {
-    lid: c.id || c.lid || "",
-    name: c.name || "",
-    min: c.min ?? 0,
-    max: c.max ?? null,
-    value: c.value ?? c.val ?? c.default_value ?? 0,
-    default_value: c.default_value ?? c.min ?? 0,
-  };
-}
-function action(a) {
-  const activation =
-    { "full action": "Full", "quick action": "Quick", "free action": "Free" }[
-      text(a.activation).toLowerCase()
-    ] ||
-    a.activation ||
-    "Quick";
-  const frequency = a.frequency || null;
-  return cleanObject({
-    ...a,
-    lid: a.id || a.lid || "",
-    activation,
-    frequency,
-    detail: html(a.detail),
-    trigger: html(a.trigger),
-    init: html(a.init),
-    terse: html(a.terse),
-    damage: list(a.damage).map((d) => ({ ...d, val: text(d.val) })),
-    range: list(a.range),
-    cost: a.cost ?? 0,
-    heat_cost: a.heat_cost ?? 0,
-    mech: a.mech ?? true,
-    pilot: a.pilot ?? false,
-    synergy_locations: list(a.synergy_locations),
-  });
-}
-function bits(d) {
-  return {
-    actions: list(d.actions).map(action),
-    bonuses: list(d.bonuses).map(bonus),
-    counters: list(d.counters).map(counter),
-    tags: list(d.tags).map((t) => ({
-      lid: t.id || t.lid || "",
-      val: text(t.val ?? 0),
-    })),
-    synergies: list(d.synergies).map(synergy),
-    deployables: list(d.deployables)
-      .map((x) => (typeof x === "string" ? x : x.id))
-      .filter(Boolean),
-    integrated: list(d.integrated)
-      .map((x) => (typeof x === "string" ? x : x.id))
-      .filter(Boolean),
-  };
-}
-function mapProfile(d) {
-  return cleanObject({
-    ...d,
-    ...bits(d),
-    damage: list(d.damage).map((x) => ({ ...x, val: text(x.val) })),
-    range: list(d.range),
-    description: html(d.description),
-    effect: html(d.effect),
-    on_attack: html(d.on_attack),
-    on_hit: html(d.on_hit),
-    on_crit: html(d.on_crit),
-    type: d.type || "Rifle",
-    skirmishable: d.skirmishable ?? true,
-    barrageable: d.barrageable ?? true,
-    cost: d.cost ?? 0,
-  });
-}
-export function toNativeItem(entry) {
-  const d = entry.data,
-    state = entry.item,
-    type = kinds[entry.kind];
-  if (!type) throw new Error(`Tipo não reconhecido: ${entry.kind}`);
-  let system = {
-    lid: d.id || state.id || `ts_${entry.kind}`,
-    description: html(d.description),
-    effect: html(d.effect),
-    ...bits(d),
-  };
-  if (["skill", "talent", "license"].includes(type))
-    system.curr_rank = state.rank ?? 1;
-  if (type === "skill") {
-    system = {
-      lid: system.lid,
-      description: html(d.description),
-      detail: text(d.detail),
-      curr_rank: system.curr_rank,
-    };
-  }
-  if (type === "talent") {
-    system.ranks = list(d.ranks).map((r) =>
-      cleanObject({ ...r, ...bits(r), description: html(r.description) }),
-    );
-    system.terse = d.terse || "";
-  }
-  if (type === "license")
-    system = {
-      lid: d.id || state.id || `lic_${d.key}`,
-      key: d.key || d.license || d.id || "",
-      manufacturer: d.manufacturer || d.source || "GMS",
-      curr_rank: state.rank ?? 1,
-    };
-  if (type === "core_bonus") {
-    system.manufacturer = d.source || d.manufacturer || "GMS";
-    system.mounted_effect = html(d.mounted_effect);
-  }
-  if (
-    [
-      "pilot_armor",
-      "pilot_weapon",
-      "pilot_gear",
-      "mech_system",
-      "mech_weapon",
-    ].includes(type)
-  ) {
-    system.uses = { value: state.currentUses ?? state.uses ?? 0 };
-    system.destroyed = !!state.destroyed;
-    system.cascading = !!state.cascading;
-  }
-  if (type === "pilot_weapon") {
-    system.damage = list(d.damage).map((x) => ({ ...x, val: text(x.val) }));
-    system.range = list(d.range);
-    system.loaded = state.loaded ?? true;
-  }
-  if (type === "reserve") {
-    system.type = d.type || "Tactical";
-    system.label = d.label || d.name;
-    system.resource_name = d.resource_name || "";
-    system.resource_cost = d.resource_cost || 0;
-  }
-  if (type === "organization") {
-    system = { ...d, ...system };
-  }
-  if (["frame", "mech_system", "mech_weapon", "weapon_mod"].includes(type)) {
-    system.manufacturer = d.source || d.manufacturer || "GMS";
-    system.license = d.license || "mf_unknown";
-    system.license_level = d.license_level || 0;
-  }
-  if (type === "weapon_mod") {
-    system.sp = d.sp || 0;
-    system.added_tags = list(d.added_tags).map((t) => ({
-      lid: t.id || t.lid,
-      val: text(t.val ?? 0),
-    }));
-    system.added_range = list(d.added_range);
-    system.added_damage = list(d.added_damage).map((x) => ({
-      ...x,
-      val: text(x.val),
-    }));
-    system.allowed_types = checklist(d.allowed_types, [
-      "Rifle",
-      "Launcher",
-      "Cannon",
-      "CQB",
-      "Melee",
-      "Nexus",
-    ]);
-    system.allowed_sizes = checklist(d.allowed_sizes, [
-      "Auxiliary",
-      "Main",
-      "Heavy",
-      "Superheavy",
-    ]);
-    system.destroyed = !!state.destroyed;
-    system.cascading = !!state.cascading;
-    system.uses = { value: state.currentUses ?? state.uses ?? 0 };
-  }
-  if (type === "mech_system") {
-    Object.assign(system, {
-      sp: d.sp || 0,
-      type: d.type || "",
-      ammo: list(d.ammo),
-    });
-  }
-  if (type === "mech_weapon") {
-    system = {
-      lid: system.lid,
-      manufacturer: system.manufacturer,
-      license: system.license,
-      license_level: system.license_level,
-      sp: d.sp || 0,
-      size: d.mount || d.size || "Main",
-      profiles: (d.profiles?.length ? d.profiles : [d]).map(mapProfile),
-      actions: list(d.actions).map(action),
-      selected_profile_index: state.selected_profile_index || 0,
-      loaded: state.loaded ?? true,
-      destroyed: !!state.destroyed,
-      cascading: !!state.cascading,
-      uses: system.uses,
-      deployables: system.deployables,
-      integrated: system.integrated,
-      no_attack: !!d.no_attack,
-      no_bonuses: !!d.no_bonuses,
-      no_core_bonuses: !!d.no_core_bonuses,
-      no_mods: !!d.no_mods,
-      no_synergies: !!d.no_synergies,
-    };
-  }
-  if (type === "frame") {
-    const s = d.stats || {};
-    system.stats = {
-      ...s,
-      heatcap: s.heatcap ?? s.heat ?? 6,
-      repcap: s.repcap ?? s.repaircap ?? s.repairCapacity ?? 0,
-      save: s.save ?? s.saveTarget ?? 10,
-      sensor_range: s.sensor_range ?? s.sensorRange ?? 10,
-      tech_attack: s.tech_attack ?? s.techAttack ?? 0,
-    };
-    system.mechtype = list(d.mechtype);
-    system.mounts = list(d.mounts);
-    system.traits = list(d.traits).map((t) => ({
-      ...t,
-      ...bits(t),
-      description: html(t.description),
-    }));
-    const c = d.core_system || {};
-    system.core_system = {
-      ...c,
-      activation: c.activation || "Free",
-      deactivation: c.deactivation || null,
-      ...bits(c),
-      active_actions: list(c.active_actions).map(action),
-      passive_actions: list(c.passive_actions).map(action),
-      active_bonuses: list(c.active_bonuses).map(bonus),
-      passive_bonuses: list(c.passive_bonuses).map(bonus),
-      active_synergies: list(c.active_synergies).map(synergy),
-      passive_synergies: list(c.passive_synergies).map(synergy),
-    };
-  }
-  const stable = `${type}:${state.instanceId || state.id || d.id || entry.key}`;
-  return {
-    name: state.flavorName || d.name || state.id || type,
-    type,
-    system: cleanObject(system),
-    flags: { [ID]: { sheetKey: stable, packed: storeData(state) } },
-  };
-}
 const normalizedItemKey = (e, native) => native.flags[ID].sheetKey;
-function managedInfo(item) {
-  return (
-    item.getFlag?.(ID, "sheetKey") ||
-    flagKey(item.toObject ? item.toObject() : item)
-  );
-}
 function actorPatch(raw, parts, type = "pilot") {
   const patch = {};
   const stats = raw.stats?.current || {},
     max = raw.stats?.max || {};
   if (parts.identity) {
-    patch['prototypeToken.name'] = raw.name;
-    patch['prototypeToken.actorLink'] = true;
+    patch["prototypeToken.name"] = raw.name;
+    patch["prototypeToken.actorLink"] = true;
     patch.name = raw.name;
     for (const field of type === "pilot"
       ? [
@@ -466,15 +114,58 @@ function actorPatch(raw, parts, type = "pilot") {
   return patch;
 }
 const pathValue = (obj, path) => path.split(".").reduce((o, k) => o?.[k], obj);
-function itemPlan(actor, sourceEntries, parts, warnings, changes) {
+function blockingWarning(warnings, operation, message) {
+  warnings.push(message);
+  operation.blocked = true;
+  (operation.issues ||= []).push(message);
+}
+function reviewTarget(doc) {
+  return {
+    key: doc.uuid || `mech:${doc.rawIndex}`,
+    name: doc.actor?.name || doc.raw.name,
+    type: doc.type,
+  };
+}
+function itemPlan(
+  actor,
+  sourceEntries,
+  parts,
+  warnings,
+  changes,
+  retainedItems,
+) {
   const operations = [],
     existing = currentItems(actor),
     used = new Set();
+  function block(message) {
+    const operation = {};
+    blockingWarning(warnings, operation, message);
+    operations.push(operation);
+  }
   for (const e of sourceEntries) {
-    const native = toNativeItem(e),
-      key = normalizedItemKey(e, native);
+    let native, identity;
+    try {
+      identity = instanceIdentity(e.item);
+      native = toNativeItem(e);
+    } catch (error) {
+      block(`${e.name}: ${error.message}`);
+      continue;
+    }
+    const key = normalizedItemKey(e, native);
     const repeated = operations.find((o) => o.key === key);
     if (repeated) {
+      if (
+        instanceKinds.has(e.kind) &&
+        (!identity ||
+          loadoutContext(e.path) === loadoutContext(repeated.sourcePath))
+      ) {
+        blockingWarning(
+          warnings,
+          repeated,
+          `${native.name}: instância repetida ou sem identificador inequívoco. Confira as montagens e os identificadores antes de aplicar.`,
+        );
+        continue;
+      }
       if (
         JSON.stringify(repeated.data.system) !== JSON.stringify(native.system)
       )
@@ -485,20 +176,82 @@ function itemPlan(actor, sourceEntries, parts, warnings, changes) {
       repeated.aliasPaths.push(e.path);
       continue;
     }
-    let item = existing.find((x) => managedInfo(x) === key);
+    const matches = existing.filter(
+      (x) =>
+        managedInfo(x) === key ||
+        (e.item._foundryUuid && x.uuid === e.item._foundryUuid),
+    );
+    if (matches.length > 1) {
+      block(
+        `${native.name}: mais de um item corresponde à instância. A reconciliação é ambígua.`,
+      );
+      continue;
+    }
+    let item = matches[0];
+    if (!item && identity) {
+      const legacy = existing.filter((x) => {
+        if (
+          x.type !== native.type ||
+          x.system?.lid !== native.system.lid ||
+          managedInfo(x) !== `${native.type}:${native.system.lid}`
+        )
+          return false;
+        const packed = readData(
+          x.getFlag?.(ID, "packed") || x.flags?.[ID]?.packed,
+        );
+        try {
+          const oldIdentity = instanceIdentity(packed);
+          return !oldIdentity || oldIdentity === identity;
+        } catch {
+          return false;
+        }
+      });
+      const incomingIds = new Set(
+        sourceEntries
+          .filter(
+            (other) =>
+              other.kind === e.kind &&
+              (other.item.id || other.data.id) === native.system.lid,
+          )
+          .map((other) => {
+            try {
+              return instanceIdentity(other.item);
+            } catch {
+              return "";
+            }
+          }),
+      );
+      if (legacy.length > 1 || (legacy.length && incomingIds.size > 1)) {
+        block(
+          `${native.name}: chave legada ambígua para várias instâncias. Revise o vínculo antes de aplicar.`,
+        );
+        continue;
+      }
+      item = legacy[0];
+      if (item)
+        warnings.push(
+          `${native.name}: o item legado será atualizado para o identificador de instância; seu estado anterior está no backup.`,
+        );
+    }
     if (!item) {
-      const external = existing.find(
+      const candidates = existing.filter(
         (x) =>
           x.type === native.type &&
           x.system?.lid === native.system.lid &&
           !managedInfo(x),
       );
+      if (candidates.length > 1) {
+        block(
+          `${native.name}: vários itens externos com o mesmo ID; adoção ambígua.`,
+        );
+        continue;
+      }
+      const external = candidates[0];
       if (external) {
         if (!parts.adopt) {
-          warnings.push(
+          block(
             `${actor.name}: ${native.name} já existe fora do Token Studio. Marque a adoção de itens para atualizá-lo sem criar duplicata.`,
           );
-          operations.push({ blocked: true });
           continue;
         }
         item = external;
@@ -508,9 +261,24 @@ function itemPlan(actor, sourceEntries, parts, warnings, changes) {
       }
     }
     if (item && used.has(item.id)) {
-      warnings.push(
+      block(
         `${native.name}: o mesmo ID aparece mais de uma vez. Verifique as instâncias e loadouts.`,
       );
+      continue;
+    }
+    if (item && managedInfo(item) && managedInfo(item) !== key)
+      warnings.push(
+        `${native.name}: vínculo de instância ${managedInfo(item)} → ${key} será reconciliado no mesmo item.`,
+      );
+    try {
+      native = applyItemState(
+        native,
+        e.item,
+        item?.system?.toObject?.() || item?.system,
+        parts.combat,
+      );
+    } catch (error) {
+      block(`${native.name}: ${error.message}`);
       continue;
     }
     if (item) {
@@ -569,10 +337,17 @@ function itemPlan(actor, sourceEntries, parts, warnings, changes) {
           field: "Item gerenciado • remover",
           before: item.toObject(),
         });
-      } else
-        warnings.push(
-          `${item.name}: item gerenciado ausente na nova build; permanece no Foundry porque a remoção não foi selecionada.`,
-        );
+      } else {
+        const message = `${item.name}: item gerenciado ausente na nova build; permanece no Foundry porque a remoção não foi selecionada.`;
+        warnings.push(message);
+        retainedItems.push({
+          document: actor.name,
+          itemId: item.id,
+          name: item.name,
+          type: item.type,
+          message,
+        });
+      }
     }
   return operations;
 }
@@ -587,18 +362,6 @@ function summarizePatch(actor, patch, changes) {
         after: v,
       });
 }
-function permission(actor, game) {
-  if (!game.user?.isGM)
-    throw new Error("A edição de ficha é exclusiva do mestre.");
-  if (!actor?.canUserModify(game.user, "update"))
-    throw new Error("Sem permissão para atualizar o personagem.");
-  if (game.system?.id !== "lancer")
-    throw new Error("A aplicação da ficha exige o sistema Lancer.");
-  if (actor.type !== "pilot")
-    throw new Error(
-      "Abra o painel em um ator do tipo piloto para importar a ficha COMP/CON.",
-    );
-}
 export async function prepareSheetPlan({
   actor,
   sheet,
@@ -612,30 +375,50 @@ export async function prepareSheetPlan({
   const raw = parsePilot(sheet.data),
     warnings = [],
     changes = [],
-    documents = [];
+    documents = [],
+    retainedItems = [];
   const pilotEntries = entries(raw).filter((e) => e.path[0] !== "mechs");
   const patch = actorPatch(raw, parts);
   function addPortrait(target, data, patch) {
     if (!parts.portrait) return;
     const portrait = pilotPortrait(data);
-    if (!portrait) { warnings.push(`${data.name}: a ficha não contém retrato publicado; a imagem atual será preservada.`); return; }
+    if (!portrait) {
+      warnings.push(
+        `${data.name}: a ficha não contém retrato publicado; a imagem atual será preservada.`,
+      );
+      return;
+    }
     patch.img = portrait;
-    if (isDefaultImage(target?.prototypeToken?.texture?.src)) patch['prototypeToken.texture.src'] = portrait;
-    const project = target?.getFlag?.(ID, 'project');
-    if (project?.views) patch[`flags.${ID}.project`]=syncPortraitProject(project,portrait);
+    if (isDefaultImage(target?.prototypeToken?.texture?.src))
+      patch["prototypeToken.texture.src"] = portrait;
+    const project = target?.getFlag?.(ID, "project");
+    if (project?.views)
+      patch[`flags.${ID}.project`] = syncPortraitProject(project, portrait);
   }
   addPortrait(actor, raw, patch);
   const items = parts.build
-    ? itemPlan(actor, pilotEntries, parts, warnings, changes)
+    ? itemPlan(actor, pilotEntries, parts, warnings, changes, retainedItems)
     : [];
-  let code = sheet.source?.code || raw.cloudID || '';
+  let code = sheet.source?.code || raw.cloudID || "";
   if (code) {
-    try { code = shareCode(code); } catch { if (sheet.source?.code) throw new Error('Código de compartilhamento COMP/CON inválido.'); code = ''; }
+    try {
+      code = shareCode(code);
+    } catch {
+      if (sheet.source?.code)
+        throw new Error("Código de compartilhamento COMP/CON inválido.");
+      code = "";
+    }
   }
   if (parts.identity) {
-    patch['system.cloud_id'] = code;
-    if (code) patch['system.last_cloud_update'] = new Date().toISOString();
-    patch[`flags.${ID}.compconLink`] = {actorUuid:actor.uuid, pilotId:raw.id, code, url:code ? `https://compcon.app/link/pilot/${code}/full/` : '', importedAt:Date.now()};
+    patch["system.cloud_id"] = code;
+    if (code) patch["system.last_cloud_update"] = new Date().toISOString();
+    patch[`flags.${ID}.compconLink`] = {
+      actorUuid: actor.uuid,
+      pilotId: raw.id,
+      code,
+      url: code ? `https://compcon.app/link/pilot/${code}/full/` : "",
+      importedAt: Date.now(),
+    };
   }
   const pilot = {
     actor,
@@ -667,8 +450,16 @@ export async function prepareSheetPlan({
       "Condições da cópia são preservadas no projeto. Não substituem automaticamente ActiveEffects do Lancer.",
     );
   summarizePatch(actor, patch, changes);
+  changes.forEach((change) => {
+    change.target = reviewTarget(pilot);
+  });
+  retainedItems.forEach((item) => {
+    item.target = reviewTarget(pilot);
+  });
   if (parts.mechs) {
     for (const [index, mech] of raw.mechs.entries()) {
+      const changeStart = changes.length,
+        retainedStart = retainedItems.length;
       const existing = (game.actors?.contents || []).find(
         (a) =>
           a.type === "mech" &&
@@ -708,7 +499,7 @@ export async function prepareSheetPlan({
           (e.kind === "frame" || e.path[3] === selected),
       );
       const ops = parts.build
-        ? itemPlan(target, es, parts, warnings, changes)
+        ? itemPlan(target, es, parts, warnings, changes, retainedItems)
         : [];
       documents.push({
         actor: existing || null,
@@ -728,6 +519,13 @@ export async function prepareSheetPlan({
           after: { name: mech.name, type: "mech" },
         });
       else summarizePatch(existing, mechPatch, changes);
+      const reviewDestination = reviewTarget(documents.at(-1));
+      changes.slice(changeStart).forEach((change) => {
+        change.target = reviewDestination;
+      });
+      retainedItems.slice(retainedStart).forEach((item) => {
+        item.target = reviewDestination;
+      });
     }
   }
   if (validateItem)
@@ -737,23 +535,37 @@ export async function prepareSheetPlan({
           try {
             await validateItem(op.data, doc.actor);
           } catch (e) {
-            op.blocked = true;
-            warnings.push(
+            blockingWarning(
+              warnings,
+              op,
               `${op.data.name}: o schema do Lancer recusou o conteúdo (${e.message}). Nenhuma alteração será aplicada.`,
             );
           }
   if (validateActor)
     for (const doc of documents) {
-      try { await validateActor(plannedActorData(doc, parts), doc); }
-      catch (error) {
-        doc.blocked = true;
-        warnings.push(`${doc.raw.name}: o Lancer recusou o ator completo (${error.message}). Nenhuma alteração será aplicada.`);
+      try {
+        await validateActor(plannedActorData(doc, parts), doc);
+      } catch (error) {
+        blockingWarning(
+          warnings,
+          doc,
+          `${doc.raw.name}: o Lancer recusou o ator completo (${error.message}). Nenhuma alteração será aplicada.`,
+        );
       }
     }
   return {
     summary: `${raw.name} • ${documents.length} documento(s) • ${changes.length} alteração(ões) para revisar`,
     warnings: [...new Set(warnings)],
     changes,
+    retainedItems,
+    blockers: documents.flatMap((doc) =>
+      [doc, ...doc.items].flatMap((operation) =>
+        (operation.issues || []).map((message) => ({
+          target: reviewTarget(doc),
+          message,
+        })),
+      ),
+    ),
     blocked: documents.some((d) => d.blocked || d.items.some((i) => i.blocked)),
     documents,
     parts: copy(parts),
@@ -761,501 +573,4 @@ export async function prepareSheetPlan({
     sheetFingerprint: JSON.stringify(sheet.data),
     sourceFingerprint: JSON.stringify(sheet.source),
   };
-}
-function refsFor(doc, created) {
-  const refs = new Map();
-  for (const op of doc.items) {
-    if (op.kind === "delete" || op.blocked) continue;
-    const id = op.id || created.find((x) => managedInfo(x) === op.key)?.id;
-    if (id)
-      for (const p of [op.sourcePath, ...(op.aliasPaths || [])])
-        refs.set(JSON.stringify(p), id);
-  }
-  return refs;
-}
-function loadoutPatch(doc, refs) {
-  const r = doc.raw;
-  if (doc.type === "pilot") {
-    const i = r.active_index || 0;
-    const l = r.loadouts?.[i];
-    if (!l) return {};
-    const result = {};
-    for (const k of ["armor", "weapons", "gear"])
-      result[`system.loadout.${k}`] = list(l[k])
-        .map((_, n) => refs.get(JSON.stringify(["loadouts", i, k, n])))
-        .filter(Boolean);
-    return result;
-  }
-  const i = r.active_loadout_index || 0,
-    l = r.loadouts?.[i];
-  if (!l) return {};
-  const offset = ["mechs", doc.rawIndex ?? 0];
-  const prefix = [...offset, "loadouts", i];
-  const frameKey = JSON.stringify([...offset, "frameData"]);
-  const mountData = [
-    ...list(l.mounts).map((m, j) => ({ m, path: [...prefix, "mounts", j] })),
-    ...["improved_armament", "integratedWeapon", "superheavy_mounting"]
-      .filter((k) => l[k]?.slots?.some((s) => s?.weapon))
-      .map((k) => ({ m: l[k], path: [...prefix, k] })),
-  ];
-  const weapon_mounts = mountData.map(({ m, path }) => ({
-    type: m.mount_type || m.type || "Main",
-    bracing: !!m.lock,
-    slots: ["slots", "extra"].flatMap((sub) =>
-      list(m[sub]).map((s, k) => ({
-        weapon: refs.get(JSON.stringify([...path, sub, k, "weapon"])) || null,
-        mod:
-          refs.get(JSON.stringify([...path, sub, k, "weapon", "mod"])) || null,
-        size: s.size || "Main",
-      })),
-    ),
-  }));
-  for (const [k, s] of list(l.integratedMounts).entries())
-    if (s.weapon)
-      weapon_mounts.push({
-        type: "Integrated",
-        bracing: false,
-        slots: [
-          {
-            weapon:
-              refs.get(
-                JSON.stringify([...prefix, "integratedMounts", k, "weapon"]),
-              ) || null,
-            mod:
-              refs.get(
-                JSON.stringify([
-                  ...prefix,
-                  "integratedMounts",
-                  k,
-                  "weapon",
-                  "mod",
-                ]),
-              ) || null,
-            size: "Integrated",
-          },
-        ],
-      });
-  return {
-    "system.loadout.frame": refs.get(frameKey) || null,
-    "system.loadout.systems": ["integratedSystems", "systems"]
-      .flatMap((k) =>
-        list(l[k]).map((_, n) => refs.get(JSON.stringify([...prefix, k, n]))),
-      )
-      .filter(Boolean),
-    "system.loadout.weapon_mounts": weapon_mounts,
-  };
-}
-function mergeSource(target, source) {
-  for (const [key, value] of Object.entries(source)) {
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      if (!target[key] || typeof target[key] !== 'object' || Array.isArray(target[key])) target[key] = {};
-      mergeSource(target[key], value);
-    } else target[key] = copy(value);
-  }
-  return target;
-}
-// A complete temporary source lets Foundry validate loadouts and actor fields
-// before any embedded item is written. Preview IDs never enter the world.
-export function plannedActorData(doc, parts) {
-  const source = doc.before ? copy(doc.before) : {name:doc.raw.name, type:doc.type, system:{}, items:[]};
-  const items = new Map(list(source.items).map(item => [item._id, item])), refs = new Map();
-  let index = 0;
-  for (const op of doc.items) {
-    if (op.kind === 'delete') { items.delete(op.id); continue; }
-    if (!op.data) continue;
-    let id = op.id;
-    if (!id) do { id = `ts${String(++index).padStart(14,'0')}`; } while (items.has(id));
-    items.set(id, mergeSource(copy(items.get(id) || {}), {...copy(op.data), _id:id}));
-    for (const path of [op.sourcePath, ...(op.aliasPaths || [])]) refs.set(JSON.stringify(path), id);
-  }
-  const patch = {...doc.patch, ...(parts.build ? loadoutPatch(doc, refs) : {})};
-  for (const [key, value] of Object.entries(patch)) {
-    if (!key.includes('.')) { mergeSource(source, {[key]:value}); continue; }
-    const path = key.split('.'); let target = source;
-    for (const segment of path.slice(0,-1)) target = target[segment] ||= {};
-    target[path.at(-1)] = copy(value);
-  }
-  source.items = [...items.values()];
-  return source;
-}
-async function restoreActor(actor, before) {
-  const now = currentItems(actor),
-    old = list(before.items),
-    oldIds = new Set(old.map((x) => x._id)),
-    nowIds = new Set(now.map((x) => x.id));
-  const extra = now.filter((x) => !oldIds.has(x.id)).map((x) => x.id);
-  if (extra.length) await actor.deleteEmbeddedDocuments("Item", extra);
-  const missing = old.filter((x) => !nowIds.has(x._id));
-  if (missing.length)
-    await actor.createEmbeddedDocuments("Item", missing, { keepId: true });
-  const updates = old.filter((x) => nowIds.has(x._id));
-  if (updates.length)
-    await actor.updateEmbeddedDocuments("Item", updates, {
-      diff: false,
-      recursive: false,
-    });
-  await actor.update(
-    { name: before.name, system: before.system, flags: before.flags, img:before.img, ...(before.prototypeToken ? {prototypeToken:before.prototypeToken} : {}) },
-    { diff: false, recursive: false },
-  );
-}
-export async function applySheetPlan({
-  plan,
-  sheet,
-  game,
-  createActor,
-  saveBackup,
-  resolvePortrait,
-  verifyActor,
-}) {
-  const pilot = plan.documents[0]?.actor;
-  permission(pilot, game);
-  validateSheet(sheet);
-  if (plan.blocked)
-    throw new Error(
-      "A revisão contém impedimentos. Corrija-os antes de aplicar.",
-    );
-  if (plan.sheetFingerprint !== JSON.stringify(sheet.data) || plan.sourceFingerprint !== JSON.stringify(sheet.source))
-    throw new Error(
-      "O rascunho mudou depois da revisão. Prepare uma nova revisão.",
-    );
-  for (const doc of plan.documents)
-    if (
-      doc.actor &&
-      JSON.stringify(doc.before) !== JSON.stringify(doc.actor.toObject())
-    )
-      throw new Error(
-        `${doc.actor.name} mudou no Foundry após a revisão. Reabra a revisão para evitar sobrescrever outra edição.`,
-      );
-  const portraits = new Map(), portraitCapabilities=new Map(), downloaded = new Map();
-  if (resolvePortrait) {
-    for (const doc of plan.documents) if (doc.patch.img) {
-      const source = doc.patch.img;
-      if (!downloaded.has(source)) {
-        try { downloaded.set(source, await resolvePortrait(doc.actor || pilot, source)); }
-        catch(error) { throw new Error(`Retrato de ${doc.raw.name}: ${error.message} A ficha não foi alterada. Revise a URL em Retrato por URL.`); }
-      }
-      const resolved=downloaded.get(source), path=typeof resolved==='string'?resolved:resolved?.url;
-      portraitCapabilities.set(doc,typeof resolved==='string'||resolved?.editable!==false);
-      if (typeof path !== 'string' || !path) throw new Error('Não foi possível validar o endereço do retrato importado.');
-      portraits.set(doc, path);
-    }
-    // Downloads can take time: do not overwrite changes made while they ran.
-    for (const doc of plan.documents) if (doc.actor && JSON.stringify(doc.before) !== JSON.stringify(doc.actor.toObject()))
-      throw new Error(`${doc.actor.name} mudou no Foundry durante o download do retrato. Prepare uma nova revisão.`);
-    if (plan.sheetFingerprint !== JSON.stringify(sheet.data) || plan.sourceFingerprint !== JSON.stringify(sheet.source)) throw new Error('O rascunho mudou durante o download. Prepare uma nova revisão.');
-  }
-  if (saveBackup)
-    await saveBackup(
-      plan.documents.filter((d) => d.before).map((d) => d.before),
-    );
-  permission(pilot, game);
-  for (const doc of plan.documents) if (doc.actor && JSON.stringify(doc.before) !== JSON.stringify(doc.actor.toObject()))
-    throw new Error(`${doc.actor.name} mudou no Foundry durante o backup. Prepare uma nova revisão.`);
-  if (plan.sheetFingerprint !== JSON.stringify(sheet.data) || plan.sourceFingerprint !== JSON.stringify(sheet.source))
-    throw new Error('O rascunho mudou durante o backup. Prepare uma nova revisão.');
-  const touched = [];
-  try {
-    for (const doc of plan.documents) {
-      if (!doc.actor) {
-        doc.actor = await createActor({
-          name: doc.raw.name,
-          type: "mech",
-          folder: pilot.folder?.id || null,
-          ownership: copy(pilot.ownership || {}),
-          flags: { [ID]: { sheetPilot: pilot.uuid } },
-        });
-        doc.uuid = doc.actor.uuid;
-      }
-      touched.push(doc);
-      if (!doc.actor.canUserModify(game.user, "update"))
-        throw new Error("Permissão de edição mudou.");
-      const deletes = doc.items
-        .filter((o) => o.kind === "delete")
-        .map((o) => o.id);
-      if (deletes.length)
-        await doc.actor.deleteEmbeddedDocuments("Item", deletes);
-      const creates = doc.items
-          .filter((o) => o.kind === "create")
-          .map((o) => o.data),
-        updates = doc.items
-          .filter((o) => o.kind === "update")
-          .map((o) => o.data);
-      const made = creates.length
-        ? await doc.actor.createEmbeddedDocuments("Item", creates)
-        : [];
-      if (updates.length)
-        await doc.actor.updateEmbeddedDocuments("Item", updates);
-      const ref = refsFor(doc, made),
-        patch = {
-          ...doc.patch,
-          ...(plan.parts.build ? loadoutPatch(doc, ref) : {}),
-        };
-      const portrait = portraits.get(doc) || doc.patch.img;
-      if (portrait) {
-        patch.img = portrait;
-        const editable=portraitCapabilities.get(doc)!==false;
-        if ('prototypeToken.texture.src' in patch) {if(editable)patch['prototypeToken.texture.src']=portrait;else delete patch['prototypeToken.texture.src'];}
-        const project = doc.before?.flags?.[ID]?.project;
-        if (project?.views) {const synced=syncPortraitProject(project,portrait);synced.views.portrait.displayOnly=!editable;if(!editable)synced.views.token=copy(project.views.token);patch[`flags.${ID}.project`]=synced;}
-        patch[`flags.${ID}.portraitSource`] = {remote:/^https:/.test(portrait)?portrait:doc.patch.img, local:/^https:/.test(portrait)?null:portrait, mode:/^https:/.test(portrait)?'url':'local', editable, importedAt:Date.now()};
-      }
-      if (doc.type === "pilot") {
-        if (plan.parts.identity && patch['system.cloud_id']) patch['system.last_cloud_update'] = new Date().toISOString();
-        const linked = copy(sheet);
-        linked.source.actorUuid = doc.actor.uuid;
-        if (plan.parts.identity && patch['system.cloud_id']) {
-          linked.source.code = patch['system.cloud_id'];
-          linked.source.url = `https://compcon.app/link/pilot/${linked.source.code}/full/`;
-        }
-        patch[`flags.${ID}.sheetProject`] = storeData(linked);
-      }
-      await doc.actor.update(patch);
-    }
-    if (plan.parts.mechs) {
-      const mechs = plan.documents.filter(doc => doc.type === 'mech');
-      if (mechs.length) {
-        const preferred = sheet.data.favorite_mech || sheet.data.state?.active_mech_id;
-        const active = mechs.find(doc => doc.raw.id === preferred) || mechs[0];
-        await pilot.update({'system.active_mech':active.actor.uuid});
-      }
-    }
-    if (verifyActor) for (const doc of touched) {
-      try { await verifyActor(doc.actor); }
-      catch(error) { throw new Error(`${doc.raw.name}: a ficha nativa do Lancer não pôde ser preparada (${error.message}).`); }
-    }
-  } catch (error) {
-    const restored = await Promise.allSettled(
-      touched
-        .reverse()
-        .map((d) =>
-          d.created ? d.actor.delete() : restoreActor(d.actor, d.before),
-        ),
-    );
-    const failures = restored.filter((x) => x.status === "rejected");
-    throw new Error(
-      failures.length
-        ? `Aplicação falhou e ${failures.length} restauração(ões) falharam. Use o backup anterior. Causa: ${error.message}`
-        : `Aplicação falhou; os documentos alterados foram restaurados. ${error.message}`,
-    );
-  }
-  return { applied: touched.length, portraitEditable:portraitCapabilities.has(plan.documents[0]) ? portraitCapabilities.get(plan.documents[0])!==false : pilot.getFlag?.(ID,'portraitSource')?.editable!==false,portrait:portraits.get(plan.documents[0]) || plan.documents[0].patch.img || null };
-}
-function packedDefinition(item) {
-  const s = item.system?.toObject?.() || copy(item.system || {});
-  function rename(v) {
-    if (Array.isArray(v)) return v.map(rename);
-    if (!v || typeof v !== "object") return v;
-    return Object.fromEntries(
-      Object.entries(v).map(([k, x]) => [k === "lid" ? "id" : k, rename(x)]),
-    );
-  }
-  const packed = readData(item.getFlag?.(ID, "packed") || item.flags?.[ID]?.packed);
-  return {
-    ...(packed?.data || packed || {}),
-    name: item.name,
-    id: s.lid,
-    ...rename(s),
-    nativeSystem: s,
-  };
-}
-const refId = (ref) =>
-  typeof ref === "string" ? ref : ref?.id || ref?.value?.id;
-const pilotRef = (mech) =>
-  mech.system?.pilot?.uuid ||
-  mech.system?.pilot?.value?.uuid ||
-  mech.system?.pilot ||
-  mech.getFlag?.(ID, "sheetPilot");
-function nativeStats(system, previous = {}) {
-  const stats = copy(previous);
-  stats.current ||= {};
-  stats.max ||= {};
-  for (const k of ["hp", "overshield", "heat", "structure", "stress"])
-    if (system[k]) {
-      stats.current[k] = system[k].value;
-      stats.max[k] = system[k].max;
-    }
-  for (const k of [
-    "armor",
-    "evasion",
-    "edef",
-    "speed",
-    "grit",
-    "burn",
-    "activations",
-    "overcharge",
-  ])
-    if (system[k] != null) {
-      stats.current[k] = system[k];
-      stats.max[k] = system[k];
-    }
-  if (system.repairs) {
-    stats.current.repairCapacity = system.repairs.value;
-    stats.max.repairCapacity = system.repairs.max;
-  }
-  return stats;
-}
-function nativeEntry(item) {
-  const entry = {
-    id: item.system.lid,
-    instanceId: item.id,
-    data: packedDefinition(item),
-    _foundryUuid: item.uuid,
-  };
-  for (const k of [
-    "loaded",
-    "destroyed",
-    "cascading",
-    "selected_profile_index",
-  ])
-    if (item.system[k] != null) entry[k] = item.system[k];
-  if (item.system.uses?.value != null)
-    entry.currentUses = item.system.uses.value;
-  return entry;
-}
-function readNativeMech(actor, previous) {
-  const s = actor.system,
-    items = currentItems(actor),
-    byId = new Map(items.map((x) => [x.id, x])),
-    raw = previous ? copy(previous) : {};
-  raw.id = s.lid || actor.id;
-  raw.name = actor.name;
-  raw.img = {...(raw.img || {}), cloud_portrait:actor.getFlag?.(ID,'portraitSource')?.remote || (/^(?:https:|data:)/i.test(actor.img || '') ? actor.img : '')};
-  raw.notes = s.notes || "";
-  raw.stats = nativeStats(s, raw.stats);
-  raw.corePower = s.core_energy;
-  raw.coreActive = s.core_active;
-  const frame = byId.get(refId(s.loadout?.frame));
-  if (frame) {
-    raw.frame = frame.system.lid;
-    raw.frameData = packedDefinition(frame);
-  }
-  const loadout = { name: "Loadout do Foundry", systems: [], mounts: [] };
-  for (const ref of list(s.loadout?.systems)) {
-    const item = byId.get(refId(ref));
-    if (item) loadout.systems.push(nativeEntry(item));
-  }
-  for (const mount of list(s.loadout?.weapon_mounts))
-    loadout.mounts.push({
-      mount_type: mount.type,
-      lock: !!mount.bracing,
-      slots: list(mount.slots).map((slot) => {
-        const item = byId.get(refId(slot.weapon)),
-          mod = byId.get(refId(slot.mod)),
-          weapon = item ? nativeEntry(item) : null;
-        if (weapon && mod) weapon.mod = nativeEntry(mod);
-        return { size: slot.size, weapon };
-      }),
-    });
-  raw.loadouts ||= [];
-  raw.active_loadout_index ||= 0;
-  raw.loadouts[raw.active_loadout_index] = loadout;
-  raw._foundryUuid = actor.uuid;
-  return raw;
-}
-export function readNativePilot(actor, game) {
-  permission(actor, game);
-  const s = actor.system,
-    old = readData(actor.getFlag?.(ID, "sheetProject"))?.data;
-  const raw = old
-    ? copy(old)
-    : {
-        itemType: "pilot",
-        id: actor.id,
-        originId: actor.id,
-        name: actor.name,
-        callsign: s.callsign || "",
-        level: s.level || 0,
-        mechs: [],
-        skills: [],
-        talents: [],
-        licenses: [],
-        core_bonuses: [],
-        reserves: [],
-        orgs: [],
-        loadouts: [],
-        active_index: 0,
-        stats: { current: {}, max: {} },
-      };
-  raw.name = actor.name;
-  raw.cloudID = s.cloud_id || '';
-  raw.img = {...(raw.img || {}), cloud_portrait:actor.getFlag?.(ID,'portraitSource')?.remote || (/^(?:https:|data:)/i.test(actor.img || '') ? actor.img : '')};
-  for (const k of [
-    "callsign",
-    "background",
-    "history",
-    "notes",
-    "status",
-    "text_appearance",
-    "player_name",
-    "level",
-  ])
-    if (s[k] != null) raw[k] = s[k];
-  raw.mechSkills = [s.hull || 0, s.agi || 0, s.sys || 0, s.eng || 0];
-  raw.stats ||= { current: {}, max: {} };
-  raw.stats.current ||= {};
-  raw.stats.max ||= {};
-  for (const k of ["hp", "overshield", "heat", "structure", "stress"])
-    if (s[k]) {
-      raw.stats.current[k] = s[k].value;
-      raw.stats.max[k] = s[k].max;
-    }
-  for (const k of [
-    "armor",
-    "evasion",
-    "edef",
-    "speed",
-    "grit",
-    "burn",
-    "activations",
-  ])
-    if (s[k] != null) {
-      raw.stats.current[k] = s[k];
-      raw.stats.max[k] = s[k];
-    }
-  const items = currentItems(actor),
-    byId = new Map(items.map((x) => [x.id, x])),
-    reverse = Object.fromEntries(Object.entries(kinds).map(([k, v]) => [v, k]));
-  for (const k of [
-    "skills",
-    "talents",
-    "licenses",
-    "core_bonuses",
-    "reserves",
-    "orgs",
-  ])
-    raw[k] = items
-      .filter((x) => reverse[x.type] === k)
-      .map((x) => ({
-        id: x.system.lid,
-        rank: x.system.curr_rank,
-        data: packedDefinition(x),
-        _foundryUuid: x.uuid,
-      }));
-  const loadout = {
-    name: "Loadout do Foundry",
-    armor: [],
-    weapons: [],
-    gear: [],
-  };
-  for (const k of ["armor", "weapons", "gear"])
-    for (const ref of list(s.loadout?.[k])) {
-      const item = byId.get(refId(ref));
-      if (item) loadout[k].push(nativeEntry(item));
-    }
-  raw.loadouts ||= [];
-  raw.active_index ||= 0;
-  raw.loadouts[raw.active_index] = loadout;
-  const linked = (game.actors?.contents || []).filter(
-    (a) => a.type === "mech" && pilotRef(a) === actor.uuid,
-  );
-  for (const mech of linked) {
-    const index = raw.mechs.findIndex(
-      (m) => m.id === (mech.system.lid || mech.id),
-    );
-    const incoming = readNativeMech(mech, index >= 0 ? raw.mechs[index] : null);
-    if (index >= 0) raw.mechs[index] = incoming;
-    else raw.mechs.push(incoming);
-  }
-  return parsePilot(JSON.parse(JSON.stringify(raw)));
 }

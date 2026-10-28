@@ -4,7 +4,11 @@ const root=process.cwd(),dest=path.join(root,'release/token-studio');
 await rm(dest,{recursive:true,force:true});
 await mkdir(path.join(dest,'scripts'),{recursive:true});await mkdir(path.join(dest,'styles'),{recursive:true});
 await copyFile('foundry/module.json',path.join(dest,'module.json'));
-for(const file of ['foundry.js','transaction.js','sheet-adapter.js','native-validation.js','stored-data.js'])await copyFile(`foundry/${file}`,path.join(dest,'scripts',file));
+for(const file of [
+  'foundry.js','transaction.js','sheet-adapter.js','native-validation.js','stored-data.js',
+  'sheet-identity.js','sheet-items.js','sheet-loadout.js','sheet-native.js','sheet-apply.js',
+  'sheet-common.js','item-state.js','image-animation.js'
+]) await copyFile(`foundry/${file}`,path.join(dest,'scripts',file));
 await copyFile('src/compcon.js',path.join(dest,'scripts/compcon.js'));
 await copyFile('src/asset-path.js',path.join(dest,'scripts/asset-path.js'));
 for(const file of ['image-url.js','image-storage.js'])await copyFile(`src/${file}`,path.join(dest,'scripts',file));
@@ -14,6 +18,8 @@ await copyFile('build/editor/editor.css',path.join(dest,'styles/editor.css'));
 await copyFile('foundry/host.css',path.join(dest,'styles/host.css'));
 await cp('public/assets',path.join(dest,'assets'),{recursive:true});
 for(const file of ['README.md','LICENSE','SPECIFICATION.md','VALIDATION.md','design-qa.md','COMP_CON_GUIDE.md'])await copyFile(file,path.join(dest,file));
+await cp('docs',path.join(dest,'docs'),{recursive:true});
+await cp('tools',path.join(dest,'tools'),{recursive:true});
 await mkdir(path.join(dest,'licenses'),{recursive:true});
 for(const [name,file]of [['Font-Awesome','node_modules/@fortawesome/fontawesome-free/LICENSE.txt'],['React','node_modules/react/LICENSE'],['React-DOM','node_modules/react-dom/LICENSE'],['Inter','node_modules/@fontsource/inter/LICENSE'],['DOMPurify','node_modules/dompurify/LICENSE']])await copyFile(file,path.join(dest,`licenses/${name}.txt`));
 const metadata=JSON.parse(await readFile(path.join(dest,'module.json'),'utf8'));

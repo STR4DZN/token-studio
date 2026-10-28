@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.4.0 — candidato de estabilização local, 2026-10-26
+
+- Todas as 11 seções extraídas do componente central, com entradas explícitas e sem migração de dados.
+- CSS organizado em arquivos por responsabilidade, mantendo a ordem da cascata. Removidas 16 declarações substituídas e a dimensão de janela já sobrescrita pelo host; regras restritas a `.ts-app` sem aumentar especificidade.
+- Comparação das 11 telas com a 0.3.3 sem diferenças de pixels; isolamento de classes/ícones verificado no fonte e no compilado.
+- Perfil reproduzível de abertura, unidades, filtros, galeria e gesto em fichas média/grande, com resultados e limites documentados.
+- Caminho do backup mostrado também após falha da aplicação. Extrator local de snapshots, roteiro de recuperação e matriz de homologação incluídos no pacote.
+- Compatibilidade Foundry/Lancer real, restauração nativa, instalação/atualização e CI remota continuam pendentes. Não é a release estável 1.0.0; sem push/publicação.
+
+
+## 0.3.3 — candidato local, 2026-10-26
+
+- Separa a revisão por destino, impedimentos, avisos e itens gerenciados antigos mantidos; mantém confirmação e remoção explícitas.
+- Corrige rolagem aninhada na revisão, mantém as ações acessíveis e pede nova preparação após falha de aplicação. Erros de importação/preparação passam a aparecer dentro do diálogo.
+- Isola o estado da Suite por chave de contexto e limita os links de download de ficha a três, com liberação dos Object URLs.
+- Separa persistência, importação/merge, revisão/aplicação e partes do adaptador em módulos próprios, preservando a fachada pública. Extração/formatação em commit separado das mudanças funcionais.
+- Acrescenta regressões de revisão, contextos/notas privados, recuperação de importação inválida, propagação de retrato e estados/prévias/catálogo de imagens, inclusive no editor compilado.
+- Candidato não publicado. Foundry 13 + Lancer reais continuam sem homologação; 1.0 ainda pendente.
+
+## 0.3.2 — candidato local, 2026-10-26
+
+- Identifica animação pelos contêineres GIF/WebP, inclusive URLs sem extensão e chunks além dos primeiros 512 bytes; distingue origem estática e desconhecida.
+- Preserva original e metadados ao recarregar/importar projeto; presets deixam os metadados da imagem de destino intactos.
+- Limpa filtros ao navegar na ficha, acrescenta acesso por teclado ao conteúdo e impede que Dados completos monte todos os ramos fechados.
+- Extrai componentes da ficha em commit mecânico separado e reutiliza o índice de busca por unidade/dados. Remove apenas declarações CSS comprovadamente substituídas.
+- Acrescenta fixtures sintéticas de animação e ficha grande, medição de busca, navegação por teclado e ensaio do editor compilado ao runner/CI.
+- Preserva a aparência existente. Foundry 13 + Lancer reais e a versão final 1.0 continuam pendentes; candidato sem publicação.
+
+## 0.3.1 — candidato local, 2026-10-26
+
+- Corrige envelope da leitura inicial e recuperação independente de rascunho/notas.
+- Preserva estado de equipamentos na importação de build e detecta perfis/contadores incompatíveis.
+- Normaliza identificadores de instância e bloqueia reconciliação ambígua antes da aplicação.
+- Preserva identificação de animação e unifica os limites de zoom sem alterar enquadramentos existentes.
+- Separa build web e preparação Sites, preserva arquivos protegidos e adiciona testes isolados de hospedagem e navegador na CI.
+- Foundry 13 + Lancer reais ainda não homologados; nenhuma release foi publicada por este trabalho.
+
+
 ## 0.3.0 — 2026-10-06
 
 - Palco usa o mesmo recorte e composição de moldura do PNG exportado, com margem para toda a saída. A arte não aparece fora da abertura.

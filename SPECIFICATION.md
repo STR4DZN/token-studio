@@ -16,7 +16,7 @@
 4. A geometria usa coordenadas normalizadas do destino, e não pixels da janela. Redimensionar a janela não altera o recorte exportado.
 5. Preencher usa a área de recorte e a rotação para calcular a escala mínima; deslocamentos são limitados no espaço da imagem rotacionada.
 6. Mostrar inteira considera os cantos da imagem. Em recorte circular, não basta encaixar o retângulo em um quadrado: os quatro cantos precisam caber no círculo.
-7. O mesmo renderizador produz a prévia final e a exportação. O canvas de edição mostra o contexto externo escurecido e uma guia de recorte; a borda final aparece na prévia do token.
+7. O mesmo renderizador produz a prévia final e a exportação. O palco mostra o recorte real e a moldura estática com margem, usando a composição da saída; xadrez e guia não são exportados.
 8. A máscara automática usa somente a região transparente central encerrada pela borda. Transparência externa não é confundida com abertura interna. A detecção não pretende resolver bordas abertas ou com várias aberturas.
 9. A origem animada é preservada. A saída estática recebe aviso explícito; manter o retrato animado original é uma opção separada que ignora a composição estática.
 10. Exportação distingue formato, resolução e qualidade da origem. Aumentar a resolução não cria detalhe.
@@ -49,10 +49,10 @@ Primeiro validar permissões e escolhas; gerar saídas; enviar arquivos novos; a
 
 ## Evolução prevista, ainda não implementada
 
-Editor de animações e exportação WebM; fila de processamento em lote com amostra; biblioteca pesquisável de bordas; máscaras de pintura e recorte avançado; camadas adicionais; ponto focal visual persistido; ferramentas de remoção de fundo. Cada expansão deve preservar os invariantes e receber testes próprios. A versão atual fecha o fluxo de edição estática e integração explícita dos destinos.
+Editor de animações e exportação WebM; fila de processamento em lote com amostra; máscaras de pintura e recorte avançado; camadas adicionais; ponto focal visual persistido; ferramentas de remoção de fundo. Cada expansão deve preservar os invariantes e receber testes próprios. A versão atual fecha o fluxo de edição estática e integração explícita dos destinos.
 
 
-## Entrega 0.2.0 — extensão de ficha e molduras
+## Histórico: entrega 0.2.0 — extensão de ficha e molduras
 
 - Catálogo das 356 imagens fornecidas: 330 molduras selecionáveis, 26 apoios preservados; miniaturas, coleções, busca, favoritas e paginação. Originais mantidos byte a byte.
 - Painel próprio de mestre com nove seções, importação por link público COMP/CON v3 e JSON, preservação de homebrews e dados desconhecidos, edição estruturada/JSON, histórico e exportação.
@@ -62,3 +62,15 @@ Editor de animações e exportação WebM; fila de processamento em lote com amo
 - Notas do mestre locais e separadas dos exports e dos flags públicos. Nenhuma escrita na conta COMP/CON.
 
 A integração no Foundry ainda exige ensaio real; deployables, ActiveEffects automáticos, rolagens e restauração de backup pela interface permanecem pendentes. Ver COMP_CON_GUIDE.md e VALIDATION.md.
+
+## Contratos atuais da 0.4.0
+
+A ficha tem onze seções; os detalhes históricos acima descrevem versões anteriores. Build e estado de sessão dos itens são escolhas separadas. Campos ausentes na origem não apagam estados existentes. Identificadores conflitantes e reconciliação ambígua bloqueiam aplicação antes de escrever. O catálogo pesquisável de molduras já está implementado.
+
+A vista pode incluir `animation: animated | static | unknown`, além do indicador legado `animated`. A inspeção de GIF e WebP usa o contêiner, não a extensão ou texto arbitrário em metadados. Falha de leitura, formato não reconhecido e APNG ficam desconhecidos; a composição estática recebe aviso. Não se trata de decodificador de quadros. O original permanece intacto. Presets excluem fonte, animação, displayOnly e sourceCrop; esses campos pertencem à vista de destino.
+
+A busca de regras usa índice por dados/unidade e aplica filtros sem alterar caminhos ou objetos de origem. Mudar a seção/unidade limpa filtros. Consultar loadout não altera seu ativo. Árvores brutas montam filhos sob demanda e mantêm a edição pelo caminho original.
+
+Planos de ficha acrescentam `changes[].target` (chave/nome/tipo do destino), `blockers` e `retainedItems`, mantendo campos anteriores e bloqueio no adaptador. Destinos com nomes iguais permanecem separados por chave. A apresentação aceita planos legados sem esses metadados. A revisão com falha exige nova preparação na interface; validações de permissão, fingerprint e snapshots continuam obrigatórias na execução.
+
+A fachada `sheet-adapter.js` mantém `prepareSheetPlan`, `applySheetPlan`, `readNativePilot`, `toNativeItem` e `plannedActorData`. A sessão da Suite é reiniciada quando `host.key` muda; o formato das chaves existentes permanece intacto. A interface mantém no máximo três links de exportação de ficha e revoga os Object URLs descartados/encerrados.

@@ -1,3 +1,22 @@
+# Validação atual — candidato Token Studio 0.4.0
+
+Estado de 2026-10-26: candidato local, sem publicação e sem homologação Foundry/Lancer real. Ver [docs/STABILIZATION.md](docs/STABILIZATION.md) para os contratos e limites da evidência.
+
+- 132 testes principais, quatro testes Sites originais e cinco testes do pacote compilado: **141 testes automatizados**.
+- **334 verificações Canvas**, animação GIF/WebP, ficha grande e exportações PNG/WebP conferidas por decodificação/hash.
+- Código-fonte e editor compilado: revisão por destino, impedimentos/avisos/itens mantidos, recusa de revisão desatualizada sem escrita e aplicação após nova preparação.
+- Cinco contextos de rascunho/notas separados; notas privadas ausentes no projeto portátil; no máximo três links de ficha e Object URLs liberados ao descartar/fechar.
+- Erro de importação/preparação visível no diálogo; recuperação de JSON inválido para uma importação válida sem escrever no ator.
+- Propagação de retrato nos dois sentidos, com token personalizado preservado. Estados de imagem, prévias em janela curta e catálogo de 24 cartões com seleção/favorito/confirmação separados.
+- Extração mecânica conferida pixel a pixel na tela de regras; novos estados de revisão inspecionados visualmente. A interface mantém a identidade anterior.
+- Build, manifestos, grafo compilado, arquivos do módulo e ZIP validados em checkout limpo. CI remota e mundo real continuam pendentes.
+
+A 0.4.0 acrescenta a extração das 11 seções, CSS organizado/isolado, comparação visual completa, perfil médio/grande repetido e caminho de backup após falha. O extrator de backup preserva snapshots; a restauração nativa continua pendente. Consulte [PERFORMANCE.md](docs/PERFORMANCE.md), [RECOVERY.md](docs/RECOVERY.md) e [HOMOLOGATION.md](docs/HOMOLOGATION.md).
+
+Os registros abaixo são históricos. Os testes com host simulado e navegador não executam um mundo real nem comprovam os defaults/derivados da versão Lancer instalada.
+
+## Histórico anterior
+
 # Validação — Token Studio 0.3.0
 
 ## Validação da 0.3.0

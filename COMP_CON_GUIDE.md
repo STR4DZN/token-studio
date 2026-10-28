@@ -1,4 +1,4 @@
-# Ficha do mestre — Token Studio 0.2.5
+# Ficha do mestre — Token Studio 0.4.0
 
 ## Carregar e revisar
 
@@ -6,7 +6,7 @@ Abra **Ficha do mestre** e cole um link público de piloto do COMP/CON v3 ou seu
 
 A interface começa em visualização. Ative **Editar ficha** para modificar sua cópia. Identidade, HASE, biografia, descrições, ranks, equipamento, dados de mechas, recursos e campos adicionais são editáveis. Textos importados são sanitizados para exibição. Os dados originais e campos desconhecidos continuam preservados no projeto; alterar um texto pela interface passa a guardar sua versão sanitizada.
 
-As seções são: Visão geral, Piloto e biografia, Habilidades, Equipamentos, Mechas, Combate e recursos, Notas do mestre, Importação e histórico e Dados completos. A busca examina os conteúdos e regras, com filtros por categoria. Listas são editáveis pela interface conforme os controles disponíveis, ou integralmente pelo editor JSON validado.
+As onze seções atuais são: Resumo, Perfil narrativo, Perfil tático, Loadout do piloto, Hangar, Ações e efeitos, Combate e recursos, Notas do mestre, Importação e histórico, Pendências e Dados completos. A busca examina os conteúdos e regras, com filtros por categoria. Listas são editáveis pela interface conforme os controles disponíveis, ou integralmente pelo editor JSON validado.
 
 **Atualizar origem** lê uma versão nova e apresenta diferenças. Cada grupo tem uma seleção explícita: alterações locais começam preservadas; mudanças divergentes nos dois lados são destacadas como conflito. Listas e mudanças de tipo são grupos inteiros, para manter IDs e ordem. Nenhuma atualização remota é aplicada ao Foundry automaticamente.
 
@@ -30,7 +30,7 @@ O projeto de ficha aplicado ao ator contém a ficha completa e a origem. Permiss
 
 Abra em um ator **piloto**, usando o sistema **Lancer** e uma conta de mestre. A leitura nativa inclui o piloto, seus itens equipados e os mechas do mundo vinculados a ele. Mechas existentes não vinculados não são adotados automaticamente.
 
-Após importar, clique **Vincular / atualizar ator…**. Escolha identidade/vínculo, retrato, build, recursos atuais e mechas; todos começam selecionados para uma importação completa. Desmarque recursos se precisar preservar o combate em andamento. Revise e aplique para atualizar o ator; carregar ou editar o rascunho sozinho não escreve na ficha nativa. Se um item externo tiver o mesmo tipo/ID, a revisão bloqueia duplicação e oferece adoção explícita. Por padrão, itens externos e itens gerenciados antigos são preservados; uma opção permite remover somente os gerenciados ausentes na build importada. Confira isso para não manter bônus antigos por engano. A mesma instância em vários loadouts vira um único item no Foundry.
+Após importar, clique **Vincular / atualizar ator…**. Escolha identidade/vínculo, retrato, build, recursos atuais e mechas; identidade, retrato, build e mechas começam selecionados; recursos de combate começam desmarcados para preservar a sessão, incluindo os estados dos equipamentos existentes. Com combate selecionado, somente estados presentes na origem são aplicados; ausência não é um reset. Perfis removidos e contadores incompatíveis exigem corrigir a revisão antes de aplicar. Revise e aplique para atualizar o ator; carregar ou editar o rascunho sozinho não escreve na ficha nativa. Se um item externo tiver o mesmo tipo/ID, a revisão bloqueia duplicação e oferece adoção explícita. Por padrão, itens externos e itens gerenciados antigos são preservados; uma opção permite remover somente os gerenciados ausentes na build importada. Confira isso para não manter bônus antigos por engano. A mesma instância em vários loadouts vira um único item no Foundry.
 
 A revisão apresenta documentos/campos, estados anteriores e posteriores, avisos e impedimentos de schema. A integração valida itens com o schema disponível no seu Lancer antes de escrever. Definições embutidas de deployables ficam preservadas; não criam atores de deployable. Condições registradas na cópia não geram ActiveEffects automaticamente. O build nativo de mechas usa o loadout ativo; demais loadouts ficam guardados no projeto. Campos homebrew não suportados pelo schema ficam no projeto, mas podem não produzir efeitos nativos.
 
@@ -81,3 +81,24 @@ Ações e efeitos usa cartões por instância/origem, com ações, passivas, efe
 ## Compatibilidade dos metadados de sincronização
 
 Na 0.2.9, os metadados com nomes literais contendo pontos são preservados em JSON nos flags do módulo. Isso impede que o Foundry interprete uma data de sincronização como objeto e interrompa a aplicação. O editor decodifica esse armazenamento ao reabrir; projetos antigos permanecem legíveis.
+
+## Identidade e recuperação na 0.3.1
+
+`instanceId` e `instance_id` são aceitos e precisam concordar quando ambos estão presentes. Duplicidade da mesma instância dentro de um loadout, adoção ambígua e chaves legadas ambíguas impedem a aplicação. A mesma instância em loadouts diferentes continua compartilhada. As definições e campos desconhecidos são preservados; a normalização não regrava o ator só por abrir a janela.
+
+A leitura automática prepara uma cópia de trabalho sem abrir uma aplicação no ator. Um rascunho inválido não substitui o projeto válido. Se notas privadas não puderem ser lidas, não são substituídas automaticamente por texto vazio; a edição explícita do mestre autoriza salvar o novo texto.
+
+## Consulta e navegação na 0.3.2
+
+Escolher outro loadout no Hangar muda somente a consulta. O indicador **Ativo** identifica a configuração usada pelas ações; a mudança do ativo continua uma edição explícita. Trocar de seção ou unidade limpa busca, categoria, tipo de ação e inclusão de inativas para evitar filtros ocultos.
+
+Ao navegar por teclado, **Ir para o conteúdo da ficha** move o foco à região principal, que pode ser percorrida com PageDown. Navegação lateral e conteúdo têm rolagens independentes. Em Dados completos, cada ramo fechado mantém os valores originais sem montar seus campos até ser aberto.
+
+## Revisar e recuperar uma operação na 0.4.0
+
+1. Escolha os destinos e prepare a revisão. Isso ainda não escreve nos atores.
+2. Confira os grupos de piloto/mechas e os valores atuais/novos. **Aplicação impedida** bloqueia a confirmação; avisos explicam limites ou decisões a revisar.
+3. Abra **Itens antigos que permanecerão**, quando presente. Eles não desaparecem só por estar ausentes na origem e podem afetar a build. A remoção exige voltar aos destinos e selecioná-la.
+4. Aplique a revisão. Se falhar, leia o resultado exibido; use **Rever destinos** e prepare novamente. A cópia local continua disponível para exportar.
+
+Erros ao carregar JSON/link ou preparar a revisão aparecem dentro do diálogo, com orientação para tentar novamente. Salvar o rascunho não aplica alterações no ator. Mundo, usuário, ator e token mantêm contextos separados; as notas privadas não entram no projeto portátil. A recuperação manual do backup no mundo de teste continua pendente de ensaio real.

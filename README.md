@@ -1,8 +1,8 @@
-# Token Studio — v0.4.0
+# Token Studio — v0.4.1
 
 Editor independente de retratos e tokens, catálogo de molduras e painel de ficha COMP/CON para o mestre. Interface baseada na proposta visual escolhida: tema escuro, destaque violeta, imagem grande e controles diretos.
 
-> Candidato local de correções: 0.4.0 ainda não foi publicado neste trabalho. A URL pública de instalação acompanha a última release publicada. Para testar este candidato, use o ZIP preparado e a instalação manual abaixo. Foundry 13 + Lancer reais ainda exigem homologação.
+> Candidato local de correções: 0.4.1 ainda não foi publicado neste trabalho. A URL pública de instalação acompanha a última release publicada. Para testar este candidato, use o ZIP preparado e a instalação manual abaixo. Foundry 13 + Lancer reais ainda exigem homologação.
 
 ## Instalar no Foundry 13
 
@@ -44,7 +44,7 @@ Abra Token Studio no ator piloto → **Ficha do mestre** → importe o link/cód
 
 As molduras favoritadas aparecem primeiro no catálogo e até seis atalhos ficam na tela inicial, persistindo neste navegador.
 
-**Escolher do catálogo** oferece 330 molduras transparentes, divididas em coleções, com busca, favoritas e páginas de 24 miniaturas. As 356 imagens originais do RAR foram preservadas byte a byte; 26 fundos/máscaras opacos continuam em `assets/frames`, sem aparecer como moldura. Bordas com abertura fechada são detectadas automaticamente; bordas abertas exigem conferir o recorte manual. Nomes originais e coleções estão em `assets/frames/credits.json`. O pacote não atribui uma licença nova às artes fornecidas por você.
+**Escolher do catálogo** oferece 435 molduras transparentes, divididas em coleções, com busca, favoritas e páginas de 24 miniaturas. As 356 imagens originais do RAR foram preservadas byte a byte; 40 fundos/máscaras opacos continuam em `assets/frames`, sem aparecer como moldura. Bordas com abertura fechada são detectadas automaticamente; bordas abertas exigem conferir o recorte manual. Nomes originais e coleções estão em `assets/frames/credits.json`. O pacote não atribui uma licença nova às artes fornecidas por você.
 
 ## Ficha do mestre
 

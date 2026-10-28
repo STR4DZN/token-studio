@@ -1,3 +1,11 @@
+# 0.4.1 — catálogo consolidado
+
+- Inclui a moldura NPC padrão na coleção Personalizadas.
+- Catálogo com 435 molduras selecionáveis e 40 apoios/máscaras.
+- Novos arquivos deduplicados por conteúdo e pixels; variantes de cor preservadas.
+- Manifestos sincronizados em 0.4.1 para identificar a atualização.
+- Mantém as correções da 0.4.0; homologação Foundry/Lancer real permanece pendente.
+
 # Changelog
 
 ## 0.4.0 — candidato de estabilização local, 2026-10-26
